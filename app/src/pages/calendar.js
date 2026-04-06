@@ -1,177 +1,218 @@
 /**
- * Calendar & Guests Page — CitraElo Rafting
+ * Jadwal (Calendar) Page — CitraElo Rafting
+ * Functional calendar with booking data from Firestore
  */
+import { db } from '../firebase/config.js';
+import { collection, getDocs } from 'firebase/firestore';
+
+const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const DAYS_ID = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+
+let currentYear, currentMonth, allBookings = [];
 
 export function renderCalendar(user) {
-  const days = generateCalendarDays(2024, 7); // August 2024 (0-indexed: 7)
-  const eventDays = [1, 3, 5, 7, 10, 13, 16, 19];
+  const now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth();
 
   return `
-    <div class="page" style="display:flex;flex-direction:column;gap:2.5rem;">
-      
-      <!-- Header -->
-      <section style="display:flex;flex-direction:column;gap:1.5rem;">
+    <div class="page" style="display:flex;flex-direction:column;gap:1.5rem;">
+      <section style="display:flex;flex-direction:column;gap:1rem;">
         <div style="display:flex;align-items:flex-end;justify-content:space-between;">
           <div>
-            <span class="label-sm" style="color:var(--secondary);letter-spacing:0.05em;">DAFTAR TAMU BERDASARKAN TANGGAL</span>
-            <h1 class="font-headline" style="font-size:2.25rem;font-weight:700;color:var(--primary);letter-spacing:-0.03em;margin-top:0.25rem;" id="calendar-title">AUGUST 2024</h1>
+            <span class="label-sm" style="color:var(--secondary);letter-spacing:0.05em;">JADWAL PESANAN</span>
+            <h1 class="font-headline" style="font-size:1.75rem;font-weight:700;color:var(--primary);letter-spacing:-0.03em;margin-top:0.25rem;" id="cal-title"></h1>
           </div>
           <div style="display:flex;gap:0.5rem;">
-            <button style="width:3rem;height:3rem;border-radius:var(--radius-md);background:var(--surface-container-low);color:var(--primary);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;" id="cal-prev">
+            <button style="width:2.5rem;height:2.5rem;border-radius:var(--radius-md);background:var(--surface-container-low);color:var(--primary);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;" id="cal-prev">
               <span class="material-symbols-outlined">chevron_left</span>
             </button>
-            <button style="width:3rem;height:3rem;border-radius:var(--radius-md);background:var(--surface-container-low);color:var(--primary);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;" id="cal-next">
+            <button style="width:2.5rem;height:2.5rem;border-radius:var(--radius-md);background:var(--surface-container-low);color:var(--primary);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;" id="cal-next">
               <span class="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
         </div>
-
-        <!-- Calendar Grid -->
-        <div style="background:var(--surface-container-lowest);border-radius:var(--radius-xl);padding:1.5rem;box-shadow:var(--shadow-card);">
-          <!-- Day Headers -->
-          <div class="calendar-grid" style="margin-bottom:1rem;">
-            ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `
-              <div style="text-align:center;font-size:0.75rem;font-weight:700;color:var(--outline);padding:0.5rem 0;text-transform:uppercase;letter-spacing:0.1em;">${d}</div>
-            `).join('')}
+        <div style="background:var(--surface-container-lowest);border-radius:var(--radius-xl);padding:1rem;box-shadow:var(--shadow-card);">
+          <div class="calendar-grid" style="margin-bottom:0.5rem;">
+            ${DAYS_ID.map(d => `<div style="text-align:center;font-size:0.6875rem;font-weight:700;color:var(--outline);padding:0.375rem 0;text-transform:uppercase;letter-spacing:0.1em;">${d}</div>`).join('')}
           </div>
-          <!-- Date Grid -->
-          <div class="calendar-grid" id="calendar-days">
-            ${days.map(day => {
-              if (!day) return '<div class="calendar-day calendar-day--inactive"></div>';
-              const isActive = day === 6;
-              const hasEvent = eventDays.includes(day);
-              return `
-                <div class="calendar-day ${isActive ? 'calendar-day--active' : ''} ${hasEvent && !isActive ? 'calendar-day--has-event' : ''}" 
-                     data-day="${day}">
-                  ${day}
-                </div>
-              `;
-            }).join('')}
-          </div>
+          <div class="calendar-grid" id="cal-days"></div>
         </div>
       </section>
-
-      <!-- Guests & Reservations -->
-      <section style="display:flex;flex-direction:column;gap:1.5rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <h2 class="font-headline" style="font-size:1.5rem;font-weight:700;color:var(--primary);">Detail Tamu</h2>
-          <span style="background:rgba(0,75,135,0.1);color:var(--primary-container);padding:0.25rem 0.75rem;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Tuesday, Aug 6</span>
+      <!-- Booking popup (hidden) -->
+      <div id="cal-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1.5rem;">
+        <div style="width:100%;max-width:420px;max-height:80vh;overflow-y:auto;background:var(--surface);border-radius:var(--radius-xl);padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h3 class="font-headline" style="font-size:1.25rem;font-weight:700;color:var(--primary);" id="popup-title"></h3>
+            <button id="popup-close" style="width:2rem;height:2rem;border-radius:50%;background:var(--surface-container-high);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">close</span>
+            </button>
+          </div>
+          <div id="popup-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;"></div>
+          <div id="popup-content"></div>
         </div>
-
-        <!-- Expedition Card 1 -->
-        <div class="card" style="padding:1.5rem;border-left:4px solid var(--secondary);">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
-            <div>
-              <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;">GORGE CANYON RUN</h3>
-              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;">
-                <span class="material-symbols-outlined filled" style="font-size:0.875rem;color:var(--secondary);">stars</span>
-                <span class="label-xs" style="color:var(--secondary);">Class IV-V Rapids</span>
-              </div>
-            </div>
-            <div style="text-align:right;">
-              <span class="font-headline" style="font-size:1.5rem;font-weight:900;color:var(--primary);">09:00</span>
-              <p class="label-xs" style="color:var(--outline);">Departure</p>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;padding:1rem 0;border-top:1px solid rgba(194,198,209,0.2);border-bottom:1px solid rgba(194,198,209,0.2);margin-bottom:1rem;">
-            <div style="width:2.5rem;height:2.5rem;border-radius:var(--radius-md);background:var(--surface-dim);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);font-size:0.75rem;">SM</div>
-            <div>
-              <p class="label-xs" style="color:var(--outline);">Lead Guide</p>
-              <p style="font-weight:700;">Sarah "Riptide" Miller</p>
-            </div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-              <p class="label-xs" style="color:var(--outline);">Manifest (8/8 Full)</p>
-              <span class="material-symbols-outlined" style="color:var(--outline);font-size:1.125rem;">groups</span>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-              <span style="background:var(--surface-container-lowest);padding:0.25rem 0.75rem;border-radius:var(--radius-md);font-size:0.75rem;font-weight:600;border:1px solid rgba(194,198,209,0.1);">John Doe</span>
-              <span style="background:var(--surface-container-lowest);padding:0.25rem 0.75rem;border-radius:var(--radius-md);font-size:0.75rem;font-weight:600;border:1px solid rgba(194,198,209,0.1);">Elena R.</span>
-              <span style="background:var(--surface-container-lowest);padding:0.25rem 0.75rem;border-radius:var(--radius-md);font-size:0.75rem;font-weight:600;border:1px solid rgba(194,198,209,0.1);">Marcus V.</span>
-              <div style="width:1.5rem;height:1.5rem;border-radius:var(--radius-md);background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">+5</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Expedition Card 2 -->
-        <div class="card" style="padding:1.5rem;border-left:4px solid var(--primary);">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
-            <div>
-              <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;">Misty Valley Float</h3>
-              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;">
-                <span class="material-symbols-outlined filled" style="font-size:0.875rem;color:var(--primary);">waves</span>
-                <span class="label-xs" style="color:var(--primary);">Class II Scenic</span>
-              </div>
-            </div>
-            <div style="text-align:right;">
-              <span class="font-headline" style="font-size:1.5rem;font-weight:900;color:var(--primary);">13:30</span>
-              <p class="label-xs" style="color:var(--outline);">Departure</p>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;padding:1rem 0;border-top:1px solid rgba(194,198,209,0.2);border-bottom:1px solid rgba(194,198,209,0.2);margin-bottom:1rem;">
-            <div style="width:2.5rem;height:2.5rem;border-radius:var(--radius-md);background:var(--surface-dim);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);font-size:0.75rem;">AC</div>
-            <div>
-              <p class="label-xs" style="color:var(--outline);">Lead Guide</p>
-              <p style="font-weight:700;">Alex Chen</p>
-            </div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-              <p class="label-xs" style="color:var(--outline);">Manifest (4/12 Open)</p>
-              <span class="material-symbols-outlined" style="color:var(--outline);font-size:1.125rem;">groups</span>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-              <span style="background:var(--surface-container-lowest);padding:0.25rem 0.75rem;border-radius:var(--radius-md);font-size:0.75rem;font-weight:600;border:1px solid rgba(194,198,209,0.1);">The Thompson Family (4)</span>
-              <span style="background:var(--surface-container-lowest);padding:0.25rem 0.75rem;border-radius:var(--radius-md);font-size:0.75rem;font-weight:600;border:1px solid rgba(194,198,209,0.1);">Bill & Jen (2)</span>
-              <div style="width:1.5rem;height:1.5rem;border-radius:var(--radius-md);background:var(--surface-container-highest);color:var(--outline);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">+2</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- New Reservation Card -->
-        <div style="border:2px dashed var(--outline-variant);border-radius:var(--radius-xl);padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;" id="new-reservation-card">
-          <div style="width:3rem;height:3rem;border-radius:50%;background:var(--surface-container-low);display:flex;align-items:center;justify-content:center;color:var(--primary);margin-bottom:1rem;">
-            <span class="material-symbols-outlined" style="font-size:1.5rem;">add</span>
-          </div>
-          <h3 class="font-headline" style="font-weight:700;">New Reservation</h3>
-          <p class="label-xs" style="color:var(--outline);margin-top:0.25rem;">August 6 Availability: High</p>
-        </div>
-      </section>
-
-      <!-- Safety Overview -->
-      <section style="padding-bottom:1rem;">
-        <div style="background:var(--primary-container);color:white;padding:2rem;border-radius:var(--radius-xl);position:relative;overflow:hidden;">
-          <div style="position:relative;z-index:1;">
-            <span class="label-xs" style="opacity:0.8;display:block;margin-bottom:0.5rem;letter-spacing:0.2em;">Safety Overview</span>
-            <h2 class="font-headline" style="font-size:1.75rem;font-weight:700;line-height:1.2;max-width:300px;">River conditions are optimal for Class V today.</h2>
-            <p style="margin-top:1rem;font-size:0.875rem;opacity:0.9;max-width:360px;">Water flow is holding steady at 12,000 CFS. All guides ensure high-velocity gear is checked before 09:00 launches.</p>
-          </div>
-          <div style="position:absolute;right:-10%;top:-20%;opacity:0.1;pointer-events:none;">
-            <span class="material-symbols-outlined filled" style="font-size:12rem;">waves</span>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   `;
 }
 
-function generateCalendarDays(year, month) {
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const prevMonthDays = new Date(year, month, 0).getDate();
-  
-  const days = [];
-  
-  // Previous month padding
-  for (let i = firstDay - 1; i >= 0; i--) {
-    days.push(null); // inactive days
+function buildCalendar() {
+  const container = document.getElementById('cal-days');
+  const titleEl = document.getElementById('cal-title');
+  if (!container || !titleEl) return;
+
+  titleEl.textContent = `${MONTHS_ID[currentMonth]} ${currentYear}`;
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today = new Date();
+  const todayDate = today.getDate();
+  const todayMonth = today.getMonth();
+  const todayYear = today.getFullYear();
+
+  // Count bookings per day
+  const dayCounts = {};
+  allBookings.forEach(b => {
+    if (!b.tanggal) return;
+    const d = new Date(b.tanggal);
+    if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+      const day = d.getDate();
+      dayCounts[day] = (dayCounts[day] || 0) + 1;
+    }
+  });
+
+  let html = '';
+  // Padding
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="calendar-day calendar-day--inactive"></div>';
   }
-  
-  // Current month
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push(i);
+  // Days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === todayDate && currentMonth === todayMonth && currentYear === todayYear;
+    const count = dayCounts[d] || 0;
+    const hasBooking = count > 0;
+    html += `<div class="calendar-day ${isToday ? 'calendar-day--active' : ''} ${hasBooking && !isToday ? 'calendar-day--has-event' : ''}" data-day="${d}" style="cursor:pointer;position:relative;">
+      ${d}
+      ${hasBooking ? `<span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:${isToday ? 'white' : 'var(--secondary)'};"></span>` : ''}
+    </div>`;
   }
-  
-  return days;
+  container.innerHTML = html;
+
+  // Click on days
+  container.querySelectorAll('.calendar-day[data-day]').forEach(el => {
+    el.addEventListener('click', () => {
+      const day = parseInt(el.dataset.day);
+      showPopup(day);
+    });
+  });
+}
+
+function showPopup(day) {
+  const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const bookings = allBookings.filter(b => b.tanggal === dateStr);
+  const popup = document.getElementById('cal-popup');
+  const titleEl = document.getElementById('popup-title');
+  const statsEl = document.getElementById('popup-stats');
+  const contentEl = document.getElementById('popup-content');
+
+  titleEl.textContent = `${day} ${MONTHS_ID[currentMonth]} ${currentYear}`;
+
+  // Group by sesi
+  const pagi = bookings.filter(b => b.sesiTrip !== 'Siang');
+  const siang = bookings.filter(b => b.sesiTrip === 'Siang');
+  const totalBoats = bookings.reduce((s, b) => s + (b.jumlahPerahu || 0), 0);
+
+  // Stats
+  statsEl.innerHTML = `
+    <div style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:0.75rem;text-align:center;">
+      <div style="font-size:1.5rem;font-weight:800;color:var(--primary);font-family:'Space Grotesk',sans-serif;">${bookings.length}</div>
+      <div class="label-xs" style="color:var(--outline);">PEMESAN</div>
+    </div>
+    <div style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:0.75rem;text-align:center;">
+      <div style="font-size:1.5rem;font-weight:800;color:var(--secondary);font-family:'Space Grotesk',sans-serif;">${totalBoats}</div>
+      <div class="label-xs" style="color:var(--outline);">TOTAL KAPAL</div>
+    </div>
+  `;
+
+  // Content
+  if (bookings.length === 0) {
+    contentEl.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--outline);">
+      <span class="material-symbols-outlined" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:0.5rem;">event_busy</span>
+      Tidak ada pesanan pada tanggal ini.
+    </div>`;
+  } else {
+    let html = '';
+    if (pagi.length > 0) {
+      html += renderSesiGroup('Pagi', pagi);
+    }
+    if (siang.length > 0) {
+      html += renderSesiGroup('Siang', siang);
+    }
+    contentEl.innerHTML = html;
+  }
+
+  popup.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function renderSesiGroup(sesi, bookings) {
+  const icon = sesi === 'Pagi' ? 'wb_sunny' : 'wb_twilight';
+  const color = sesi === 'Pagi' ? 'var(--primary)' : 'var(--secondary)';
+  const totalBoats = bookings.reduce((s, b) => s + (b.jumlahPerahu || 0), 0);
+
+  let html = `
+    <div style="margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:${sesi === 'Pagi' ? 'var(--primary-fixed)' : 'var(--secondary-fixed)'};border-radius:var(--radius-full);">
+        <span class="material-symbols-outlined" style="font-size:1rem;color:${color};">${icon}</span>
+        <span style="font-weight:700;font-size:0.8125rem;color:${color};">Trip ${sesi}</span>
+        <span style="margin-left:auto;font-size:0.75rem;font-weight:700;color:${color};">${totalBoats} kapal</span>
+      </div>`;
+
+  bookings.forEach(b => {
+    html += `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.625rem 0.75rem;background:var(--surface-container-low);border-radius:var(--radius-xl);margin-bottom:0.375rem;">
+        <div style="width:2rem;height:2rem;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:0.6875rem;font-weight:700;flex-shrink:0;">
+          ${(b.nama || '?').charAt(0).toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <p style="font-weight:700;font-size:0.8125rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.nama || '-'}</p>
+          <p style="font-size:0.6875rem;color:var(--outline);">${b.raftingType || ''}</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <p style="font-weight:800;font-size:0.875rem;color:${color};font-family:'Space Grotesk',sans-serif;">${b.jumlahPerahu || 0}</p>
+          <p style="font-size:0.5625rem;color:var(--outline);font-weight:700;">KAPAL</p>
+        </div>
+      </div>`;
+  });
+
+  html += '</div>';
+  return html;
+}
+
+export function initCalendar() {
+  // Load bookings
+  getDocs(collection(db, 'bookings')).then(snap => {
+    allBookings = snap.docs.map(d => d.data());
+    buildCalendar();
+  }).catch(e => { console.error(e); buildCalendar(); });
+
+  // Nav buttons
+  document.getElementById('cal-prev')?.addEventListener('click', () => {
+    currentMonth--;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    buildCalendar();
+  });
+  document.getElementById('cal-next')?.addEventListener('click', () => {
+    currentMonth++;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    buildCalendar();
+  });
+
+  // Close popup
+  document.getElementById('cal-popup')?.addEventListener('click', (e) => {
+    if (e.target.id === 'cal-popup' || e.target.closest('#popup-close')) {
+      document.getElementById('cal-popup').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  });
 }

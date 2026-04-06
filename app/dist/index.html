@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#003461">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="CitraElo Rafting — High-performance expedition management for elite river teams">
+  <title>CitraElo Rafting</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='90' font-size='90'>🌊</text></svg>">
+  
+  <style>
+    /* Critical CSS - prevent FOUC */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f8f9fa;
+      font-family: 'Manrope', sans-serif;
+      overflow-x: hidden;
+    }
+    #app {
+      min-height: 100dvh;
+    }
+    /* Loading screen */
+    .app-loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      z-index: 999;
+      gap: 1.5rem;
+    }
+    .app-loader__logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #003461;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+    }
+    .app-loader__spinner {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 3px solid #e7e8e9;
+      border-top-color: #003461;
+      border-radius: 50%;
+      animation: loader-spin 0.8s linear infinite;
+    }
+    @keyframes loader-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-CedEOIhB.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Cap2GlmI.css">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div class="app-loader" id="app-loader">
+    <div class="app-loader__spinner"></div>
+    <div class="app-loader__logo">CitraElo Rafting</div>
+  </div>
+
+  <!-- App Mount Point -->
+  <div id="app"></div>
+
+  <!-- Main Script -->
+  
+  <!-- Hide loader when app is ready -->
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loader = document.getElementById('app-loader');
+        if (loader) {
+          loader.style.transition = 'opacity 0.3s ease';
+          loader.style.opacity = '0';
+          setTimeout(() => loader.remove(), 300);
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>

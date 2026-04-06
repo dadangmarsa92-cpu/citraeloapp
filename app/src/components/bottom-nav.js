@@ -16,7 +16,7 @@ export function renderBottomNav() {
       </button>
       <button class="bottom-nav__item" data-route="/calendar" type="button">
         <span class="material-symbols-outlined bottom-nav__item-icon">calendar_today</span>
-        <span class="bottom-nav__item-label">CALENDAR</span>
+        <span class="bottom-nav__item-label">JADWAL</span>
       </button>
 
       ${isAdmin ? `

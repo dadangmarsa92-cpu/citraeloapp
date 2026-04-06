@@ -8,7 +8,7 @@ import { renderBottomNav, initBottomNav } from './components/bottom-nav.js';
 import { renderLogin, initLoginPage } from './pages/login.js';
 import { renderUserDashboard, initUserDashboard } from './pages/user-dashboard.js';
 import { renderAdminDashboard, initAdminDashboard } from './pages/admin-dashboard.js';
-import { renderCalendar } from './pages/calendar.js';
+import { renderCalendar, initCalendar } from './pages/calendar.js';
 import { renderReports } from './pages/reports.js';
 import { renderProfile, initProfilePage } from './pages/profile.js';
 import { renderSettings, initSettings } from './pages/settings.js';
@@ -88,6 +88,7 @@ function renderApp() {
         break;
       case '/calendar':
         content = renderCalendar(user);
+        afterRender = () => initCalendar();
         break;
       case '/reports':
         content = renderReports(user);
