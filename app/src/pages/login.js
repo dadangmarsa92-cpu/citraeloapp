@@ -74,16 +74,8 @@ export function renderLogin() {
           </div>
         </form>
 
-        <!-- Seed Database Button -->
-        <div style="margin-top:1.5rem;text-align:center;">
-          <button type="button" id="btn-seed" style="background:none;border:1px solid var(--outline-variant);border-radius:var(--radius-full);padding:0.5rem 1.25rem;font-size:0.75rem;font-weight:700;color:var(--outline);cursor:pointer;font-family:'Manrope',sans-serif;letter-spacing:0.05em;transition:all 0.2s;">
-            ⚡ Setup Database
-          </button>
-          <div id="seed-status" style="margin-top:0.5rem;font-size:0.75rem;font-weight:600;display:none;"></div>
-        </div>
-
         <!-- Footer -->
-        <div style="margin-top:2rem;display:flex;align-items:center;justify-content:space-between;opacity:0.5;">
+        <div style="margin-top:4rem;display:flex;align-items:center;justify-content:space-between;opacity:0.5;">
           <span class="label-xs">By : Dadang M&nbsp; v 1.0</span>
           <div style="display:flex;gap:1rem;">
             <span class="material-symbols-outlined" style="font-size:1.125rem;">shield</span>
@@ -173,44 +165,5 @@ export function initLoginPage() {
     }
   }
 
-  // Seed database button
-  const seedBtn = document.getElementById('btn-seed');
-  const seedStatus = document.getElementById('seed-status');
 
-  if (seedBtn) {
-    seedBtn.addEventListener('click', async () => {
-      seedBtn.disabled = true;
-      seedBtn.textContent = '⏳ Menyiapkan database...';
-      if (seedStatus) {
-        seedStatus.style.display = 'block';
-        seedStatus.style.color = 'var(--outline)';
-        seedStatus.textContent = 'Membuat tabel users...';
-      }
-
-      try {
-        // Seed users
-        await seedUsers();
-        if (seedStatus) seedStatus.textContent = 'Membuat data demo...';
-
-        // Seed demo data
-        await seedDemoData();
-
-        if (seedStatus) {
-          seedStatus.style.color = '#16a34a';
-          seedStatus.textContent = '✅ Database siap! Login: admin/admin123 atau user/user123';
-        }
-        seedBtn.textContent = '✅ Database Siap';
-        seedBtn.style.borderColor = '#16a34a';
-        seedBtn.style.color = '#16a34a';
-      } catch (error) {
-        console.error('Seed error:', error);
-        if (seedStatus) {
-          seedStatus.style.color = 'var(--error)';
-          seedStatus.textContent = '❌ Error: ' + error.message;
-        }
-        seedBtn.textContent = '⚡ Setup Database';
-        seedBtn.disabled = false;
-      }
-    });
-  }
 }

@@ -68,116 +68,71 @@ export async function getMonthlyReports() {
 }
 
 // ── Seed Demo Data ──
+// ── Seed Demo Data ──
 export async function seedDemoData() {
-  // Expeditions
-  const expeditions = [
-    {
-      name: 'Gorge Canyon Run',
-      tripId: '#TC-9921',
-      classLevel: 'Class IV+',
-      date: '2024-08-06',
-      departureTime: '09:00',
-      leadGuide: 'Sarah "Riptide" Miller',
-      maxCapacity: 8,
-      currentManifest: 8,
-      status: 'active',
-      guests: ['John Doe', 'Elena R.', 'Marcus V.']
-    },
-    {
-      name: 'Misty Valley Float',
-      tripId: '#SD-4412',
-      classLevel: 'Class II',
-      date: '2024-08-06',
-      departureTime: '13:30',
-      leadGuide: 'Alex Chen',
-      maxCapacity: 12,
-      currentManifest: 4,
-      status: 'active',
-      guests: ['The Thompson Family (4)', 'Bill & Jen (2)']
-    },
-    {
-      name: 'CitraElo Rapids Express',
-      tripId: '#GG-2281',
-      classLevel: 'Class III',
-      date: '2024-08-06',
-      departureTime: '15:00',
-      leadGuide: 'Tom "Beard" Vance',
-      maxCapacity: 12,
-      currentManifest: 12,
-      status: 'active',
-      guests: ['University Kayak Club', 'Private Group B']
-    },
-    {
-      name: 'Thunder Canyon Run',
-      tripId: '#TC-9921',
-      classLevel: 'Class IV',
-      date: '2024-07-14',
-      departureTime: '09:00',
-      leadGuide: 'Marcus S.',
-      maxCapacity: 12,
-      currentManifest: 12,
-      status: 'completed',
-      guests: []
-    },
-    {
-      name: 'Morning Mist Float',
-      tripId: '#MM-3301',
-      classLevel: 'Class II',
-      date: '2024-08-02',
-      departureTime: '07:30',
-      leadGuide: 'Elena L.',
-      maxCapacity: 8,
-      currentManifest: 6,
-      status: 'active',
-      guests: []
+  const raftingTypes = [
+    { name: 'Elo River Adventure', price: 750000 },
+    { name: 'Progo River Thrill', price: 1200000 },
+    { name: 'Family Fun Float', price: 600000 }
+  ];
+
+  const tambahanTypes = [
+    { name: 'Dokumentasi', price: 150000 },
+    { name: 'Makan Siang Extra', price: 50000 },
+    { name: 'Transportasi antar-jemput', price: 200000 }
+  ];
+
+  // Seed Rafting Types
+  for (const type of raftingTypes) {
+    await setDoc(doc(db, 'rafting_types', type.name.replace(/\s+/g, '_').toLowerCase()), type);
+  }
+
+  // Seed Tambahan Types
+  for (const extra of tambahanTypes) {
+    await setDoc(doc(doc(db, 'tambahan_types', extra.name.replace(/\s+/g, '_').toLowerCase())), extra);
+  }
+
+  // Generate April 2026 Bookings
+  const names = ['Andi', 'Budi', 'Cici', 'Dedi', 'Euis', 'Fajar', 'Gita', 'Hadi', 'Indra', 'Joko', 'Kiki', 'Lulu', 'Maman', 'Nina', 'Oki', 'Putri'];
+  const dates = [];
+  for (let i = 1; i <= 30; i++) {
+    dates.push(`2026-04-${String(i).padStart(2, '0')}`);
+  }
+
+  for (const date of dates) {
+    // 1-3 bookings per day
+    const bookingCount = Math.floor(Math.random() * 3) + 1;
+    for (let j = 0; j < bookingCount; j++) {
+      const name = names[Math.floor(Math.random() * names.length)] + ' ' + (j + 1);
+      const type = raftingTypes[Math.floor(Math.random() * raftingTypes.length)];
+      const boats = Math.floor(Math.random() * 3) + 1;
+      const participants = boats * (Math.floor(Math.random() * 2) + 4); // 4-5 per boat
+      const sessi = Math.random() > 0.5 ? 'Pagi' : 'Siang';
+      
+      const extras = [];
+      if (Math.random() > 0.5) extras.push({ ...tambahanTypes[0], qty: boats });
+      if (Math.random() > 0.7) extras.push({ ...tambahanTypes[1], qty: participants });
+
+      const subtotalExtras = extras.reduce((sum, e) => sum + (e.price * e.qty), 0);
+      const total = (type.price * boats) + subtotalExtras;
+
+      await addDoc(collection(db, 'bookings'), {
+        nama: name,
+        noTelp: '08' + Math.floor(Math.random() * 1000000000),
+        tanggalPemesanan: '2026-04-01',
+        tanggal: date,
+        raftingType: type.name,
+        hargaPerKapal: type.price,
+        jumlahPeserta: participants,
+        jumlahPerahu: boats,
+        sesiTrip: sessi,
+        tambahan: extras,
+        totalHarga: total,
+        createdAt: serverTimestamp()
+      });
     }
-  ];
-
-  for (const exp of expeditions) {
-    await addDoc(collection(db, 'expeditions'), { ...exp, createdAt: serverTimestamp() });
   }
 
-  // Bookings
-  const bookings = [
-    { expeditionName: 'Thunder Canyon Run', tripId: '#TC-9921', guestName: 'Group Alpha', numberOfPersons: 12, status: 'paid', date: '2024-07-14' },
-    { expeditionName: 'Sunset Drift Expedition', tripId: '#SD-4412', guestName: 'Team Beta', numberOfPersons: 6, status: 'pending', date: '2024-07-20' },
-    { expeditionName: 'Granite Gorge Sprint', tripId: '#GG-2281', guestName: 'Solo Explorer', numberOfPersons: 4, status: 'cancelled', date: '2024-07-22' }
-  ];
-
-  for (const b of bookings) {
-    await addDoc(collection(db, 'bookings'), { ...b, createdAt: serverTimestamp() });
-  }
-
-  // Guides
-  const guides = [
-    { name: 'Sarah Miller', nickname: 'Riptide', specialty: 'Class V Expert', isAvailable: true, sector: 'Alpha' },
-    { name: 'Alex Chen', nickname: '', specialty: 'Scenic Float', isAvailable: true, sector: 'Alpha' },
-    { name: 'Tom Vance', nickname: 'Beard', specialty: 'Speed Runs', isAvailable: true, sector: 'Alpha' },
-    { name: 'Marcus Santos', nickname: '', specialty: 'Lead Guide', isAvailable: true, sector: 'Alpha' },
-    { name: 'Elena Lopez', nickname: '', specialty: 'Nature Specialist', isAvailable: true, sector: 'Alpha' },
-    { name: 'Jake Rivers', nickname: '', specialty: 'Safety Lead', isAvailable: true, sector: 'Alpha' },
-    { name: 'Nadia Patel', nickname: '', specialty: 'Kayak Instructor', isAvailable: true, sector: 'Beta' },
-    { name: 'Oscar Wu', nickname: '', specialty: 'Equipment Lead', isAvailable: true, sector: 'Beta' }
-  ];
-
-  for (const g of guides) {
-    await addDoc(collection(db, 'guides'), { ...g, createdAt: serverTimestamp() });
-  }
-
-  // Reports
-  const reports = [
-    { month: 'March', revenue: 28500, bookings: 310 },
-    { month: 'April', revenue: 35200, bookings: 380 },
-    { month: 'May', revenue: 31000, bookings: 340 },
-    { month: 'June', revenue: 52000, bookings: 420 },
-    { month: 'July', revenue: 68000, bookings: 482 },
-    { month: 'August', revenue: 78500, bookings: 510 },
-    { month: 'September', revenue: 45300, bookings: 390 }
-  ];
-
-  for (const r of reports) {
-    await addDoc(collection(db, 'reports'), { ...r, createdAt: serverTimestamp() });
-  }
-
-  console.log('Demo data seeded successfully!');
+  console.log('April 2026 demo data seeded successfully!');
 }
+

@@ -12,6 +12,8 @@ import { renderCalendar, initCalendar } from './pages/calendar.js';
 import { renderReports } from './pages/reports.js';
 import { renderProfile, initProfilePage } from './pages/profile.js';
 import { renderSettings, initSettings } from './pages/settings.js';
+import { seedDemoData } from './firebase/firestore.js';
+import { seedUsers } from './firebase/auth.js';
 
 // ── State ──
 let currentRoute = null;
@@ -137,6 +139,16 @@ function init() {
   }
   
   renderApp();
+
+  // One-time auto seeder for April dummy data
+  const hasSeeded = localStorage.getItem('citraelo_april_seeded');
+  if (!hasSeeded) {
+    console.log('Seeding April dummy data...');
+    Promise.all([seedUsers(), seedDemoData()]).then(() => {
+      localStorage.setItem('citraelo_april_seeded', 'true');
+      console.log('April dummy data seeded successfully!');
+    });
+  }
 }
 
 // Boot
