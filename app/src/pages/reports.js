@@ -119,8 +119,6 @@ export function initReports() {
     btnFilter.innerHTML = '<div class="spinner" style="width:1rem;height:1rem;border-width:2px;"></div>';
     
     try {
-      // Because firestore string comparisons work lexicographically for "YYYY-MM-DD"
-      // We can use where("tanggal", ">=", from) and where("tanggal", "<=", to)
       const q = query(
         collection(db, 'bookings'),
         where('tanggal', '>=', fromVal),
@@ -130,7 +128,6 @@ export function initReports() {
       const snap = await getDocs(q);
       const bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      // Sort ascending by date
       bookings.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
       currentData = bookings;
 
@@ -152,7 +149,7 @@ export function initReports() {
 
         const dt = b.tanggal;
         if (!dailyMap[dt]) dailyMap[dt] = 0;
-        dailyMap[dt] += val; // Chart shows total transaction value formulated by day
+        dailyMap[dt] += val;
       });
 
       document.getElementById('rep-total-transaksi').textContent = formatRp(totalTransaksi);
@@ -168,17 +165,17 @@ export function initReports() {
         bookings.forEach(b => {
           const lbrDate = new Date(b.tanggal).toLocaleDateString('id-ID');
           const isLunas = b.kurangBayar <= 0;
-          html += \`
+          html += `
             <tr style="border-bottom:1px solid var(--surface-container-high);">
-              <td style="padding:0.75rem 0.5rem;color:var(--on-surface-variant);">\${lbrDate}</td>
-              <td style="padding:0.75rem 0.5rem;font-weight:700;">\${b.idPesanan}</td>
-              <td style="padding:0.75rem 0.5rem;">\${b.nama}</td>
-              <td style="padding:0.75rem 0.5rem;">\${b.raftingType}</td>
-              <td style="padding:0.75rem 0.5rem;text-align:right;font-weight:700;color:var(--primary);">\${formatRp(b.totalPesanan)}</td>
-              <td style="padding:0.75rem 0.5rem;text-align:right;color:#16a34a;">\${formatRp(b.dp)}</td>
-              <td style="padding:0.75rem 0.5rem;text-align:right;color:\${isLunas ? 'var(--outline)' : 'var(--error)'};font-weight:\${isLunas ? 'normal' : '700'};\${isLunas ? 'opacity:0.3' : ''}">\${isLunas ? 'LUNAS' : formatRp(b.kurangBayar)}</td>
+              <td style="padding:0.75rem 0.5rem;color:var(--on-surface-variant);">${lbrDate}</td>
+              <td style="padding:0.75rem 0.5rem;font-weight:700;">${b.idPesanan}</td>
+              <td style="padding:0.75rem 0.5rem;">${b.nama}</td>
+              <td style="padding:0.75rem 0.5rem;">${b.raftingType}</td>
+              <td style="padding:0.75rem 0.5rem;text-align:right;font-weight:700;color:var(--primary);">${formatRp(b.totalPesanan)}</td>
+              <td style="padding:0.75rem 0.5rem;text-align:right;color:#16a34a;">${formatRp(b.dp)}</td>
+              <td style="padding:0.75rem 0.5rem;text-align:right;color:${isLunas ? 'var(--outline)' : 'var(--error)'};font-weight:${isLunas ? 'normal' : '700'};${isLunas ? 'opacity:0.3' : ''}">${isLunas ? 'LUNAS' : formatRp(b.kurangBayar)}</td>
             </tr>
-          \`;
+          `;
         });
         tbody.innerHTML = html;
       }
@@ -199,17 +196,15 @@ export function initReports() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    // Set actual size in memory (scaled to account for extra pixel density).
+    // Set actual size in memory
     canvas.width = canvas.offsetWidth * dpr;
     canvas.height = canvas.offsetHeight * dpr;
-    // Normalize coordinate system to use css pixels.
     ctx.scale(dpr, dpr);
     
     const W = canvas.offsetWidth;
     const H = canvas.offsetHeight;
     ctx.clearRect(0, 0, W, H);
 
-    // Build complete date array from From to To
     const keys = [];
     let start = new Date(fromStr);
     const end = new Date(toStr);
@@ -241,7 +236,6 @@ export function initReports() {
         const y = 20 + (chartH / gridLines) * i;
         const val = maxVal - (maxVal / gridLines) * i;
         ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W, y); ctx.stroke();
-        // Format to 'k' (ribuan) or 'jt' (jutaan)
         let label = '';
         if (val >= 1000000) label = (val/1000000).toFixed(1) + 'Jt';
         else if (val >= 1000) label = (val/1000).toFixed(0) + 'k';
@@ -250,21 +244,19 @@ export function initReports() {
         ctx.fillText(label, 35, y + 4);
     }
 
-    // Plot bars
     ctx.textAlign = 'center';
     keys.forEach((key, i) => {
       const val = dailyMap[key] || 0;
       const x = 40 + i * gap + (gap - barW) / 2;
       const hScale = (val / maxVal) * chartH;
       
-      // Bar
       ctx.fillStyle = '#003461'; // primary
       ctx.beginPath();
       const r = Math.min(4, barW/2);
       ctx.roundRect(x, 20 + chartH - hScale, barW, hScale, [r, r, 0, 0]);
       ctx.fill();
 
-      // Date Label (Show every Nth depending on density)
+      // Date Label
       const labelSkip = Math.ceil(keys.length / 15);
       if (i % labelSkip === 0) {
         ctx.fillStyle = '#666';
@@ -285,8 +277,8 @@ export function initReports() {
     const rows = currentData.map(b => [
       b.tanggal, 
       b.idPesanan, 
-      \`"\${b.nama}"\`,
-      \`"'\${b.telp}"\`, // force string for phone
+      `"${b.nama}"`,
+      `"'${b.telp}"`, 
       b.sesiTrip,
       b.raftingType,
       b.jumlahPerahu,
@@ -297,15 +289,14 @@ export function initReports() {
       b.metodeBayar
     ]);
 
-    let csvContent = headers.join(',') + '\\n';
-    rows.forEach(r => { csvContent += r.join(',') + '\\n' });
+    let csvContent = headers.join(',') + '\n';
+    rows.forEach(r => { csvContent += r.join(',') + '\n' });
 
-    // Download Blob
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', \`Laporan_Pendapatan_\${dateFrom.value}_sampai_\${dateTo.value}.csv\`);
+    link.setAttribute('download', `Laporan_Pendapatan_${dateFrom.value}_sampai_${dateTo.value}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -317,7 +308,7 @@ export function initReports() {
     }
 
     const printWindow = window.open('', '_blank');
-    let html = \`
+    let html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -337,20 +328,20 @@ export function initReports() {
       </head>
       <body>
         <h2>CITRAELO RAFTING - Laporan Pendapatan</h2>
-        <p>Periode: \${new Date(dateFrom.value).toLocaleDateString('id-ID')} s/d \${new Date(dateTo.value).toLocaleDateString('id-ID')}</p>
+        <p>Periode: ${new Date(dateFrom.value).toLocaleDateString('id-ID')} s/d ${new Date(dateTo.value).toLocaleDateString('id-ID')}</p>
         
         <div class="summary">
           <div class="card">
             <div>TOTAL TRANSAKSI</div>
-            <div class="card-value">\${document.getElementById('rep-total-transaksi').textContent}</div>
+            <div class="card-value">${document.getElementById('rep-total-transaksi').textContent}</div>
           </div>
           <div class="card">
             <div>DANA MASUK (DP+LUNAS)</div>
-            <div class="card-value" style="color:green;">\${document.getElementById('rep-total-masuk').textContent}</div>
+            <div class="card-value" style="color:green;">${document.getElementById('rep-total-masuk').textContent}</div>
           </div>
           <div class="card">
             <div>SISA PIUTANG</div>
-            <div class="card-value" style="color:red;">\${document.getElementById('rep-total-piutang').textContent}</div>
+            <div class="card-value" style="color:red;">${document.getElementById('rep-total-piutang').textContent}</div>
           </div>
         </div>
 
@@ -368,35 +359,35 @@ export function initReports() {
             </tr>
           </thead>
           <tbody>
-    \`;
+    `;
 
     currentData.forEach(b => {
-      html += \`
+      html += `
         <tr>
-          <td>\${new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
-          <td>\${b.idPesanan}</td>
-          <td>\${b.nama}</td>
-          <td>\${b.raftingType}</td>
-          <td class="right">\${b.jumlahPerahu}</td>
-          <td class="right">\${formatRp(b.totalPesanan)}</td>
-          <td class="right">\${formatRp(b.dp)}</td>
-          <td class="right">\${formatRp(b.kurangBayar)}</td>
+          <td>${new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
+          <td>${b.idPesanan}</td>
+          <td>${b.nama}</td>
+          <td>${b.raftingType}</td>
+          <td class="right">${b.jumlahPerahu}</td>
+          <td class="right">${formatRp(b.totalPesanan)}</td>
+          <td class="right">${formatRp(b.dp)}</td>
+          <td class="right">${formatRp(b.kurangBayar)}</td>
         </tr>
-      \`;
+      `;
     });
 
-    html += \`
+    html += `
           </tbody>
         </table>
         <div style="margin-top:30px; text-align:right; font-size:10px; color:#999;">
-          Di-generate pada: \${new Date().toLocaleString('id-ID')}
+          Di-generate pada: ${new Date().toLocaleString('id-ID')}
         </div>
         <script>
           setTimeout(() => { window.print(); }, 500);
         </script>
       </body>
       </html>
-    \`;
+    `;
 
     printWindow.document.write(html);
     printWindow.document.close();
@@ -411,7 +402,6 @@ export function initReports() {
     const fromVal = dateFrom.value;
     const toVal = dateTo.value;
     if (currentData.length > 0) {
-      // Build daily map again for redraw since we don't save map state
       const map = {};
       currentData.forEach(b => {
         const val = Number(b.totalPesanan) || 0;
