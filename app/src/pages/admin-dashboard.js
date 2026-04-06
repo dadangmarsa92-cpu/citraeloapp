@@ -226,11 +226,14 @@ function getModalHTML() {
               <p style="font-size:0.65rem;color:var(--outline);margin-top:0.25rem;">— Safe Rivers, Great Adventures —</p>
             </div>
           </div>
-          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
-            <button type="button" id="btn-cetak" class="btn btn--gradient" style="flex:2;height:auto;padding:0.875rem;font-size:0.875rem;">
-              <span class="material-symbols-outlined" style="font-size:1.125rem;">print</span> Cetak Struk
+          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;">
+            <button type="button" id="btn-cetak-bt" style="flex:1;min-width:140px;height:auto;padding:0.875rem;font-size:0.875rem;background:var(--tertiary-container);color:var(--on-tertiary-container);border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">bluetooth</span> Bluetooth Thermal
             </button>
-            <button type="button" id="btn-tutup" style="flex:1;padding:0.875rem;border:1px solid var(--outline-variant);background:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--outline);cursor:pointer;font-size:0.875rem;">Tutup</button>
+            <button type="button" id="btn-cetak" class="btn btn--gradient" style="flex:1;min-width:140px;height:auto;padding:0.875rem;font-size:0.875rem;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">print</span> Cetak Struk (PDF)
+            </button>
+            <button type="button" id="btn-tutup" style="flex:1;min-width:100px;padding:0.875rem;border:1px solid var(--outline-variant);background:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--outline);cursor:pointer;font-size:0.875rem;">Tutup</button>
           </div>
         </div>
       </div>
@@ -767,4 +770,151 @@ export function initAdminDashboard() {
       setTimeout(() => printWindow.print(), 300);
     };
   });
+
+  // Direct Bluetooth Thermal Print (Web Bluetooth API)
+  document.getElementById('btn-cetak-bt')?.addEventListener('click', async () => {
+    if (!navigator.bluetooth) {
+      alert('Browser ini tidak mendukung Web Bluetooth. Gunakan Chrome di Android/PC.');
+      return;
+    }
+
+    try {
+      const btnBt = document.getElementById('btn-cetak-bt');
+      const originalText = btnBt.innerHTML;
+      btnBt.innerHTML = '<div class="spinner" style="width:1.25rem;height:1.25rem;border-width:2px;border-color:var(--on-tertiary-container);border-bottom-color:transparent;"></div> Menghubungkan...';
+      btnBt.disabled = true;
+
+      // Request BT device
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+        optionalServices: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      }).catch(err => {
+        // Fallback filter if the specific receipt printer service doesn't match
+        return navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+        });
+      });
+
+      const server = await device.gatt.connect();
+      
+      // Get primary service (common for thermal printers)
+      const serviceUUIDs = ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
+      let service = null;
+      for (const uuid of serviceUUIDs) {
+        try {
+          service = await server.getPrimaryService(uuid);
+          if (service) break;
+        } catch (e) { /* ignore and try next */ }
+      }
+      
+      if (!service) {
+        throw new Error("Layanan printer tidak ditemukan.");
+      }
+
+      // Get characteristic for writing
+      const characteristics = await service.getCharacteristics();
+      const writeChar = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+
+      if (!writeChar) {
+        throw new Error("Karakteristik penulisan data tidak ditemukan.");
+      }
+
+      // Build ESC/POS payload
+      const encoder = new TextEncoder();
+      let payload = new Uint8Array();
+
+      function append(bytes) {
+        const temp = new Uint8Array(payload.length + bytes.length);
+        temp.set(payload);
+        temp.set(bytes, payload.length);
+        payload = temp;
+      }
+      
+      function addText(text) { append(encoder.encode(text)); }
+
+      const ESC = 0x1B;
+      const GS = 0x1D;
+
+      // INIT
+      append([ESC, 0x40]); 
+      
+      // HEADER
+      append([ESC, 0x61, 0x01]); // Align Center
+      append([ESC, 0x21, 0x08]); // Bold
+      addText("CITRAELO RAFTING\n");
+      append([ESC, 0x21, 0x00]); // Normal
+      addText("Struk Pemesanan\n");
+      addText(`${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}\n`);
+      addText("--------------------------------\n"); // 32 chars width (58mm)
+      
+      // BODY
+      append([ESC, 0x61, 0x00]); // Align Left
+
+      // Helper for key-value layout
+      function addKv(k, v) {
+        const width = 32;
+        let strK = (k || "").substring(0, 15);
+        let strV = (v || "").toString().substring(0, 16);
+        let spaces = width - strK.length - strV.length;
+        if (spaces < 1) spaces = 1;
+        addText(strK + " ".repeat(spaces) + strV + "\n");
+      }
+
+      addKv("ID Pesanan", savedBooking?.idPesanan);
+      addKv("Nama", savedBooking?.nama);
+      addKv("No.Telp", savedBooking?.telp);
+      const bookingDate = savedBooking?.tanggal ? new Date(savedBooking.tanggal).toLocaleDateString('id-ID') : '';
+      addKv("Tanggal", bookingDate);
+      addKv("Jml Perahu", `${savedBooking?.jumlahPerahu} kapal`);
+      addKv("Sesi", savedBooking?.sesiTrip);
+      addKv("Harga/Kpl", formatRp(savedBooking?.hargaPerKapal));
+      
+      if (savedBooking?.tambahan && savedBooking.tambahan.length > 0) {
+        addText("--------------------------------\n");
+        append([ESC, 0x21, 0x08]); // Bold
+        addText("TAMBAHAN\n");
+        append([ESC, 0x21, 0x00]); // Normal
+        savedBooking.tambahan.forEach(t => {
+          addKv(`${t.jenis} (${t.qty}x)`, formatRp(t.subtotal));
+        });
+      }
+
+      // FOOTER
+      addText("--------------------------------\n");
+      append([ESC, 0x21, 0x08]); // Bold
+      addKv("TOTAL", formatRp(savedBooking?.totalPesanan));
+      append([ESC, 0x21, 0x00]); // Normal
+      
+      addKv("DP", formatRp(savedBooking?.dp));
+      addKv("Kurang", formatRp(savedBooking?.kurangBayar));
+      addKv("Metode", savedBooking?.metodeBayar);
+
+      addText("\n");
+      append([ESC, 0x61, 0x01]); // Align Center
+      addText("Terima kasih telah memilih\nCitraElo Rafting!\n");
+      addText("- Safe Rivers, Great Adventures -\n");
+      addText("\n\n\n\n"); // Feed paper
+
+      // Send in chunks (max 512 bytes per write usually requested for BT GATT)
+      const chunkSize = 256;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        await writeChar.writeValue(chunk);
+      }
+
+      btnBt.innerHTML = originalText;
+      btnBt.disabled = false;
+      alert("Cetak berhasil!");
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('btn-cetak-bt').innerHTML = '<span class="material-symbols-outlined" style="font-size:1.125rem;">bluetooth</span> Bluetooth Thermal';
+      document.getElementById('btn-cetak-bt').disabled = false;
+      if (e.name !== 'NotFoundError') {
+        alert("Gagal mencetak: " + e.message);
+      }
+    }
+  });
+
 }
