@@ -89,7 +89,7 @@ export async function seedDemoData() {
 
   // Seed Tambahan Types
   for (const extra of tambahanTypes) {
-    await setDoc(doc(doc(db, 'tambahan_types', extra.name.replace(/\s+/g, '_').toLowerCase())), extra);
+    await setDoc(doc(db, 'tambahan_types', extra.name.replace(/\s+/g, '_').toLowerCase()), extra);
   }
 
   // Generate April 2026 Bookings
