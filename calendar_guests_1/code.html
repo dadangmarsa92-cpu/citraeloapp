@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KINETIC | Expedition Calendar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#727781",
+                    "on-tertiary-fixed": "#001c37",
+                    "on-tertiary": "#ffffff",
+                    "background": "#f8f9fa",
+                    "secondary": "#ab3600",
+                    "on-surface-variant": "#424750",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-container": "#edeeef",
+                    "secondary-container": "#fe5e1e",
+                    "surface": "#f8f9fa",
+                    "on-secondary-fixed-variant": "#832700",
+                    "primary-fixed-dim": "#a3c9ff",
+                    "on-tertiary-container": "#99bbea",
+                    "tertiary-fixed-dim": "#a6c9f8",
+                    "primary-fixed": "#d3e4ff",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#244871",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#a3c9ff",
+                    "surface-bright": "#f8f9fa",
+                    "primary-container": "#004b87",
+                    "error-container": "#ffdad6",
+                    "on-background": "#191c1d",
+                    "on-primary-fixed-variant": "#004882",
+                    "on-primary-fixed": "#001c38",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-high": "#e7e8e9",
+                    "tertiary": "#08345b",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#d2e4ff",
+                    "on-surface": "#191c1d",
+                    "on-secondary": "#ffffff",
+                    "tertiary-container": "#274b74",
+                    "surface-dim": "#d9dadb",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#27609d",
+                    "secondary-fixed-dim": "#ffb59c",
+                    "surface-variant": "#e1e3e4",
+                    "on-secondary-fixed": "#390c00",
+                    "on-primary-container": "#8abcff",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#c2c6d1",
+                    "on-secondary-container": "#551600",
+                    "primary": "#003461",
+                    "secondary-fixed": "#ffdbcf",
+                    "inverse-on-surface": "#f0f1f2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "1.5rem",
+                    "md": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body antialiased pb-24">
+<header class="fixed top-0 w-full z-50 bg-[#f8f9fa]/70 dark:bg-[#191c1d]/70 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full">
+<div class="flex items-center gap-2 text-[#004B87]">
+<span class="material-symbols-outlined" data-icon="waves">waves</span>
+<span class="text-2xl font-black tracking-[-0.02em] text-[#003461] dark:text-[#f8f9fa] font-headline uppercase">KINETIC</span>
+</div>
+<div class="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden border-2 border-primary-container active:scale-95 duration-200 transition-opacity hover:opacity-80">
+<img alt="User Profile" data-alt="close-up portrait of a professional mountain guide with sun-kissed skin and rugged outdoor gear, warm natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRJ7cQKLGED_ukpJ5n-fYVBgpYv6SDjOJo9fBT1N2_ANpM2_A6oCXhgsKx0EASbULSaJGhxmKLuxOFCaZkmL5mdu805HL1shyO6teLTFBLyckJTBIZFwY09YK9q3rgPPnfv5slnz37OrxxaHx3VmA5C5MT1wl7-0waBCEtDxZEphcC26VQ3ooaOZRQ2URUdzcBUtgMBeDuJV80VckZl2K0o4Af6sZ3fouIR9QnLe8hblxh_Rva_gW2J3TMF4LHqGGVLKnSCpMO1no"/>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-5xl mx-auto space-y-10">
+<section class="space-y-6">
+<div class="flex items-end justify-between">
+<div>
+<span class="text-secondary font-label text-sm font-bold tracking-[0.05em] uppercase">Expedition Log</span>
+<h1 class="text-4xl font-headline font-bold text-primary tracking-tighter mt-1">AUGUST 2024</h1>
+</div>
+<div class="flex gap-2">
+<button class="h-12 w-12 rounded-md bg-surface-container-low text-primary flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="h-12 w-12 rounded-md bg-surface-container-low text-primary flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<div class="calendar-grid mb-4">
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Sun</div>
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Mon</div>
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Tue</div>
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Wed</div>
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Thu</div>
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Fri</div>
+<div class="text-center text-xs font-bold text-outline py-2 uppercase tracking-widest">Sat</div>
+</div>
+<div class="calendar-grid gap-1">
+<div class="aspect-square flex items-center justify-center text-outline/30 text-sm">28</div>
+<div class="aspect-square flex items-center justify-center text-outline/30 text-sm">29</div>
+<div class="aspect-square flex items-center justify-center text-outline/30 text-sm">30</div>
+<div class="aspect-square flex items-center justify-center text-outline/30 text-sm">31</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        1
+                        <div class="absolute bottom-2 w-1 h-1 bg-secondary rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">2</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        3
+                        <div class="absolute bottom-2 w-1 h-1 bg-primary-container rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">4</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        5
+                        <div class="absolute bottom-2 w-1 h-1 bg-secondary rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold bg-primary text-on-primary rounded-md shadow-md ring-4 ring-primary-container/20">6</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        7
+                        <div class="absolute bottom-2 w-1 h-1 bg-secondary rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">8</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">9</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        10
+                        <div class="absolute bottom-2 w-1 h-1 bg-primary-container rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">11</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">12</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        13
+                        <div class="absolute bottom-2 w-1 h-1 bg-secondary rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">14</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">15</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        16
+                        <div class="absolute bottom-2 w-1 h-1 bg-secondary rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">17</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">18</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer relative">
+                        19
+                        <div class="absolute bottom-2 w-1 h-1 bg-primary-container rounded-full"></div>
+</div>
+<div class="aspect-square flex flex-col items-center justify-center text-sm font-bold hover:bg-surface-container-low rounded-md transition-colors cursor-pointer">20</div>
+</div>
+</div>
+</section>
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-headline font-bold text-primary">Guests &amp; Reservations</h2>
+<span class="bg-primary-container/10 text-primary-container px-3 py-1 rounded-full text-xs font-bold font-label tracking-wider uppercase">Tuesday, Aug 6</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-low rounded-xl p-6 relative overflow-hidden group hover:bg-surface-container transition-colors border-l-4 border-secondary">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-bold font-headline text-on-background leading-tight">GORGE CANYON RUN</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-sm text-secondary" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="text-sm font-bold text-secondary uppercase font-label">Class IV-V Rapids</span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-2xl font-black font-headline text-primary">09:00</span>
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Departure</p>
+</div>
+</div>
+<div class="flex items-center gap-3 py-4 border-y border-outline-variant/20 mb-4">
+<div class="h-10 w-10 rounded-md overflow-hidden bg-surface-dim">
+<img alt="Guide" data-alt="professional rafting guide with helmet and life vest looking confidently at camera, river background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIwYQ47WiRk5H54xnPKLj4hXrb9OdbbvWYIPOw8gh2k2m0UN11UzJWHYiEc3hXw2KoBVGnDL3-b6RoeISeoRyutgI06yv7Sp5T_QRsX0cjcSEtDYmBvWiGbJz_W-5lopbXxkAC52ss9rNvJro0vv6j9o87QxqJA0B7e5xMiPjdHWi1z6rTR3QIFNmiLwPSdYRO0dO2-qNGijJQB5G89-IvQzku0_gEqZGpc3VKpSQFWLk9VzopxbTAScbfb0ED2siMvKSaFqXolAc"/>
+</div>
+<div>
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Lead Guide</p>
+<p class="font-bold text-on-surface">Sarah "Riptide" Miller</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Manifest (8/8 Full)</p>
+<span class="material-symbols-outlined text-outline text-lg">groups</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">John Doe</span>
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">Elena R.</span>
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">Marcus V.</span>
+<div class="bg-primary text-on-primary h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold">+5</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-6 relative overflow-hidden group hover:bg-surface-container transition-colors border-l-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-bold font-headline text-on-background leading-tight">Misty Valley Float</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-sm text-primary" style="font-variation-settings: 'FILL' 1;">waves</span>
+<span class="text-sm font-bold text-primary uppercase font-label">Class II Scenic</span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-2xl font-black font-headline text-primary">13:30</span>
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Departure</p>
+</div>
+</div>
+<div class="flex items-center gap-3 py-4 border-y border-outline-variant/20 mb-4">
+<div class="h-10 w-10 rounded-md overflow-hidden bg-surface-dim">
+<img alt="Guide" data-alt="outdoorsman guide with braided hair wearing tech fleece, soft lighting against forest background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0kMovIB2Hacf5bRreiYQ2WilrVHWbfDmTvfbcwNjMTRE4HXgNydFSW3wIIFzGqw0Am-Y1e3zOG9V8CyagpaKK0VwrMGv9O_li5iIDXerjyg9Ys-Dx1zopbFrf3zrf62njl8bff77tg8ieaTWWc9pBIUBUoOgw1_G2xbEs3qATWyWG4Xm8JwknmHAY-FNuNI-mGMSJb_-R6yWMuyfkzsSL9dsX9wrhIIyijhvemOus4jf927atQxJ0_LIW9HLQU7vf0p3zpEzbDH4"/>
+</div>
+<div>
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Lead Guide</p>
+<p class="font-bold text-on-surface">Alex Chen</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Manifest (4/12 Open)</p>
+<span class="material-symbols-outlined text-outline text-lg">groups</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">The Thompson Family (4)</span>
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">Bill &amp; Jen (2)</span>
+<div class="bg-surface-container-highest text-outline h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold">+2</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-6 relative overflow-hidden group hover:bg-surface-container transition-colors border-l-4 border-secondary/50">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-bold font-headline text-on-background leading-tight">CitraElo Rapids Express</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-sm text-secondary/50" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="text-sm font-bold text-secondary/70 uppercase font-label">Class III Fast</span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-2xl font-black font-headline text-primary">15:00</span>
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Departure</p>
+</div>
+</div>
+<div class="flex items-center gap-3 py-4 border-y border-outline-variant/20 mb-4">
+<div class="h-10 w-10 rounded-md overflow-hidden bg-surface-dim">
+<img alt="Guide" data-alt="middle aged guide with grey beard and outdoor hat, expertise and reliability, soft mountain light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIdoUURXFy4Aclooj37ghkYhIT7iW9SF8WisyDbKvXL1QKNuXmUvQ1SVcQIpFhhblft5lxSOsF1fOGrfN0WlvdNe45Yu7PaSmlsAOU6GfQJgNQxpg1bbLz2g1hSKL8wkrfON2oCtTJbXM4gTFR497_iYdvIPb3-EE4j5jC59X8XtVpvSdYbaVZGz5FK_WJX4z3kVnJecaTlkkQt0I33oI-KNcFhJpoGQcMbNIyRGEglGp6jMSw6Jyf6rJIglGtNWUnE0Tm2TJUq00"/>
+</div>
+<div>
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Lead Guide</p>
+<p class="font-bold text-on-surface">Tom "Beard" Vance</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest">Manifest (12/12 Full)</p>
+<span class="material-symbols-outlined text-outline text-lg">groups</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">University Kayak Club</span>
+<span class="bg-surface-container-lowest px-3 py-1 rounded-md text-xs font-semibold border border-outline-variant/10">Private Group B</span>
+</div>
+</div>
+</div>
+<div class="border-2 border-dashed border-outline-variant rounded-xl p-6 flex flex-col items-center justify-center text-center group hover:border-secondary transition-colors cursor-pointer">
+<div class="h-12 w-12 rounded-full bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-secondary group-hover:text-white transition-all duration-300 mb-4">
+<span class="material-symbols-outlined text-2xl">add</span>
+</div>
+<h3 class="font-bold font-headline text-on-background">New Reservation</h3>
+<p class="text-xs text-outline mt-1 uppercase font-label tracking-widest">August 6 Availability: High</p>
+</div>
+</div>
+</section>
+<section class="pb-12">
+<div class="bg-primary-container text-white p-8 rounded-xl relative overflow-hidden">
+<div class="relative z-10">
+<span class="text-[10px] font-bold opacity-80 uppercase tracking-[0.2em] mb-2 block font-label">Safety Overview</span>
+<h2 class="text-3xl font-headline font-bold leading-tight max-w-md">River conditions are optimal for Class V today.</h2>
+<p class="mt-4 text-sm opacity-90 max-w-lg">Water flow is holding steady at 12,000 CFS. All guides ensure high-velocity gear is checked before 09:00 launches.</p>
+</div>
+<div class="absolute right-[-10%] top-[-20%] opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-[200px]" style="font-variation-settings: 'FILL' 1;">waves</span>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-[#f8f9fa]/80 dark:bg-[#191c1d]/80 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#191c1d] dark:text-[#f3f4f5] opacity-60 hover:bg-[#f3f4f5] dark:hover:bg-[#191c1d] transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">DASHBOARD</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#004b87] text-white rounded-[0.75rem] px-4 py-1.5 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">CALENDAR</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#191c1d] dark:text-[#f3f4f5] opacity-60 hover:bg-[#f3f4f5] dark:hover:bg-[#191c1d] transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="insert_chart">insert_chart</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">REPORTS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#191c1d] dark:text-[#f3f4f5] opacity-60 hover:bg-[#f3f4f5] dark:hover:bg-[#191c1d] transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">PROFILE</span>
+</a>
+</nav>
+</body></html>

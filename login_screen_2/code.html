@@ -1,0 +1,170 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>KINETIC | Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .flow-gradient-btn {
+            background: linear-gradient(135deg, #003461 0%, #004b87 100%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#27609d",
+                      "on-error": "#ffffff",
+                      "on-primary-fixed": "#001c38",
+                      "tertiary-fixed-dim": "#a6c9f8",
+                      "surface-bright": "#f8f9fa",
+                      "tertiary-container": "#274b74",
+                      "on-surface": "#191c1d",
+                      "surface-dim": "#d9dadb",
+                      "inverse-surface": "#2e3132",
+                      "primary": "#003461",
+                      "secondary": "#ab3600",
+                      "surface": "#f8f9fa",
+                      "on-background": "#191c1d",
+                      "on-secondary-fixed-variant": "#832700",
+                      "inverse-primary": "#a3c9ff",
+                      "on-tertiary-fixed": "#001c37",
+                      "on-primary-fixed-variant": "#004882",
+                      "on-surface-variant": "#424750",
+                      "on-tertiary-container": "#99bbea",
+                      "on-secondary-fixed": "#390c00",
+                      "inverse-on-surface": "#f0f1f2",
+                      "tertiary": "#08345b",
+                      "primary-container": "#004b87",
+                      "error-container": "#ffdad6",
+                      "secondary-container": "#fe5e1e",
+                      "tertiary-fixed": "#d2e4ff",
+                      "outline-variant": "#c2c6d1",
+                      "on-tertiary": "#ffffff",
+                      "on-secondary-container": "#551600",
+                      "background": "#f8f9fa",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed": "#ffdbcf",
+                      "surface-container-high": "#e7e8e9",
+                      "error": "#ba1a1a",
+                      "on-primary": "#ffffff",
+                      "outline": "#727781",
+                      "surface-container-low": "#f3f4f5",
+                      "on-tertiary-fixed-variant": "#244871",
+                      "surface-container": "#edeeef",
+                      "primary-fixed": "#d3e4ff",
+                      "on-secondary": "#ffffff",
+                      "on-primary-container": "#8abcff",
+                      "secondary-fixed-dim": "#ffb59c",
+                      "surface-variant": "#e1e3e4",
+                      "primary-fixed-dim": "#a3c9ff",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#e1e3e4"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Space Grotesk"],
+                      "body": ["Manrope"],
+                      "label": ["Manrope"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased overflow-hidden">
+<div class="relative min-h-screen flex items-center justify-center p-6 md:p-12 overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img alt="whitewater rafting rapids" class="w-full h-full object-cover scale-105" data-alt="dramatic wide angle shot of powerful whitewater river rapids crashing over rocks with misty spray and deep blue water tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcT6rDNPQoFrkM-NoOWlFTdZReGFfOqiTLY-ACh7JX4U4aKGK9uvuv2NRPcFJyCkWZ5HvUdKR-7EhdfEqG0LZtvnDiCYEVWdFJ8BQymeetGebC_7UOegoHRMaF2vk8NPvDc2nrI1lrLCijshQYKUj6Ks8WVacjU0iJRNCg2Bs09lzFENOXtkxC-EfV3yawBvTupXM0KvvZ6aWLOd-qBLLWtiUOdKKqlqcWJCn4gVPbfd9prVosX3sWEZnTDEvSIj9BSKE5M20NL7E" style="">
+<div class="absolute inset-0 bg-primary/40 backdrop-blur-[2px]"></div>
+</div>
+<main class="relative z-10 w-full max-w-[1100px] flex flex-col md:flex-row items-stretch min-h-[640px] rounded-[1.5rem] overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)]">
+<section class="hidden md:flex flex-1 relative flex-col justify-end p-12 overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img alt="kayaker in rapids" class="w-full h-full object-cover" data-alt="dynamic close-up of a professional kayaker navigating intense whitewater rapids, sun reflecting off the water spray and equipment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzwC1u2mvp0rLkGaA1R4lyvPSeh11GjP345PPF5D4T-AW3equ7auAlMW8LSsXPDzcEE6MeMBp-EzLLJdI14_fPuEva5kd7EnxhsU0ubTvCDo2jJVEb6WT5elZCT_UDlxMizIS-csINwJN60AZQS33GgGjGfUAhpMMB93edupW_lCsrbc6ndIqSnnT4v5CxdkAHv4oJh6du8ClzD0vzsrq7VhCeY-Bjcg0m5frEpT_s0zn322xL8lMRS03W8MAuGuCKcij23mNGIpY" style="">
+<div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/20 to-transparent"></div>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-on-primary text-4xl" data-icon="waves" style="">waves</span>
+<h1 class="font-headline font-black text-4xl tracking-tighter text-on-primary uppercase" style="">KINETIC</h1>
+</div>
+<p class="font-headline text-5xl font-bold text-on-primary leading-tight tracking-tight mb-4" style="">
+                        COMMAND THE <br><span class="text-secondary-container" style="">FLOW.</span>
+</p>
+<p class="text-on-primary/80 max-w-md text-lg font-light leading-relaxed" style="">
+                        High-performance expedition management for elite river teams and outdoor professionals.
+                    </p>
+</div>
+</section>
+<section class="flex-1 bg-surface-container-lowest/90 backdrop-blur-xl p-8 md:p-16 flex flex-col justify-center">
+<div class="mb-12">
+<h2 class="font-headline text-3xl font-bold tracking-tight text-on-surface mb-2" style="">Login ke CitraElo</h2>
+<p class="text-on-surface-variant font-medium" style="">Pilih Pengguna</p>
+</div>
+<form class="space-y-8">
+<div class="bg-surface-container-low p-1.5 rounded-full flex gap-1">
+<button class="flex-1 py-3 px-6 rounded-full text-sm font-bold tracking-wider uppercase flex items-center justify-center gap-2 bg-primary text-on-primary shadow-lg transition-all duration-300" type="button" style="">
+<span class="material-symbols-outlined text-lg" data-icon="person" style="">person</span>
+                            USER
+                        </button>
+<button class="flex-1 py-3 px-6 rounded-full text-sm font-bold tracking-wider uppercase flex items-center justify-center gap-2 text-on-surface-variant hover:bg-surface-container-high transition-all duration-300" type="button" style="">
+<span class="material-symbols-outlined text-lg" data-icon="admin_panel_settings" style="">admin_panel_settings</span>
+                            ADMIN
+                        </button>
+</div>
+<div class="space-y-5">
+<div class="group">
+<label class="block text-[10px] font-bold tracking-[0.1em] text-on-surface-variant uppercase mb-2 ml-4" style="">USERNAME</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="alternate_email" style="">alternate_email</span>
+<input class="w-full h-14 pl-12 pr-6 bg-surface-container-highest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all" placeholder="Masukkan username" type="email">
+</div>
+</div>
+<div class="group">
+<div class="flex justify-between items-center mb-2 ml-4 mr-4">
+<label class="text-[10px] font-bold tracking-[0.1em] text-on-surface-variant uppercase" style="">PASSWORD</label>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="lock" style="">lock</span>
+<input class="w-full h-14 pl-12 pr-12 bg-surface-container-highest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all" placeholder="••••••••" type="password">
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface" type="button" style="">
+<span class="material-symbols-outlined" data-icon="visibility" style="">visibility</span>
+</button>
+</div>
+</div>
+</div>
+<div class="pt-4 space-y-6">
+<button class="w-full h-14 flow-gradient-btn text-on-primary font-headline font-bold text-lg tracking-tight rounded-full shadow-xl hover:shadow-primary/20 active:scale-[0.98] transition-all duration-200 uppercase" type="submit" style="">
+                            LOG IN
+                        </button>
+</div>
+</form>
+<div class="mt-16 flex items-center justify-between opacity-50">
+<span class="text-[10px] font-bold tracking-widest uppercase" style="">By : Dadang M&nbsp; v 1.0</span>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-lg" data-icon="shield" style="">shield</span>
+<span class="material-symbols-outlined text-lg" data-icon="public" style="">public</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>
