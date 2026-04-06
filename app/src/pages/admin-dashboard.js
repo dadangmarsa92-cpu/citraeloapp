@@ -2,7 +2,7 @@
  * Admin Dashboard Page — CitraElo Rafting
  */
 import { db } from '../firebase/config.js';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { loadRaftingTypes, loadTambahanTypes } from './settings.js';
 
 export function renderAdminDashboard(user) {
@@ -83,6 +83,24 @@ export function renderAdminDashboard(user) {
           <canvas id="chart-orders" style="width:100%;height:200px;"></canvas>
         </div>
       </section>
+
+      <!-- Data Tamu Section -->
+      <section style="margin-top:0.5rem;padding-bottom:2rem;">
+        <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.75rem;">Data Tamu</h3>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:flex-end;">
+          <div style="flex:1;">
+            <label class="label-xs" style="display:block;color:var(--outline);margin-bottom:0.25rem;">TANGGAL KUNJUNGAN</label>
+            <input type="date" id="tamu-date" class="input-field" value="${today}" style="padding-left:0.75rem;height:2.25rem;font-size:0.75rem;">
+          </div>
+          <button id="btn-tamu-filter" style="height:2.25rem;padding:0 1rem;background:var(--primary);color:white;border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;">
+            <span class="material-symbols-outlined" style="font-size:0.875rem;">search</span> Cari
+          </button>
+        </div>
+        <div id="tamu-list-container" style="display:grid;grid-template-columns:1fr;gap:0.75rem;">
+          <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+        </div>
+      </section>
+
     </div>
   `;
 }
@@ -97,7 +115,7 @@ function getModalHTML() {
         <div id="booking-form-view">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
             <div>
-              <h2 class="font-headline" style="font-size:1.5rem;font-weight:700;color:var(--primary);">Tambah Tamu</h2>
+              <h2 id="modal-booking-title" class="font-headline" style="font-size:1.5rem;font-weight:700;color:var(--primary);">Tambah Tamu</h2>
               <p style="font-size:0.75rem;color:var(--outline);margin-top:0.25rem;">Isi data pesanan pelanggan</p>
             </div>
             <button id="btn-modal-close" style="width:2.5rem;height:2.5rem;border-radius:50%;background:var(--surface-container-high);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--outline);">
@@ -397,6 +415,7 @@ export function initAdminDashboard() {
   let selectedSesi = 'Pagi';
   let selectedMetode = 'Cash';
   let savedBooking = null;
+  let currentEditId = null;
 
   // Generate ID
   function generateOrderId() {
@@ -437,8 +456,10 @@ export function initAdminDashboard() {
     }
   });
 
-  // Open modal
+  // Open modal for new booking
   document.getElementById('btn-tambah-tamu')?.addEventListener('click', () => {
+    currentEditId = null;
+    document.getElementById('modal-booking-title').textContent = 'Tambah Tamu';
     formView.style.display = 'block';
     receiptView.style.display = 'none';
     document.getElementById('form-booking').reset();
@@ -638,12 +659,25 @@ export function initAdminDashboard() {
     };
 
     try {
-      // Save to Firestore
-      await addDoc(collection(db, 'bookings'), {
-        ...savedBooking,
-        createdAt: serverTimestamp(),
-        status: dp >= total ? 'paid' : 'pending'
-      });
+      if (currentEditId) {
+        // Update to Firestore
+        await updateDoc(doc(db, 'bookings', currentEditId), {
+          ...savedBooking,
+          updatedAt: serverTimestamp(),
+          status: dp >= total ? 'paid' : 'pending'
+        });
+      } else {
+        // Save new to Firestore
+        await addDoc(collection(db, 'bookings'), {
+          ...savedBooking,
+          createdAt: serverTimestamp(),
+          status: dp >= total ? 'paid' : 'pending'
+        });
+      }
+
+      // Refresh list
+      loadTamuList();
+      loadTodayStats();
 
       // Show receipt
       showReceipt(savedBooking);
@@ -770,6 +804,210 @@ export function initAdminDashboard() {
       setTimeout(() => printWindow.print(), 300);
     };
   });
+
+  // ── DATA TAMU LIST ──
+  // Function to attach edit, delete, and print events to dynamically created cards
+  function attachTamuEvents() {
+    document.querySelectorAll('.btn-tamu-hapus').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('Yakin ingin menghapus data tamu ini? Data akan hilang selamanya.')) {
+          try {
+            await deleteDoc(doc(db, 'bookings', id));
+            loadTamuList();
+            loadTodayStats();
+          } catch (err) {
+            alert('Gagal menghapus: ' + err.message);
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-tamu-cetak').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const payload = e.currentTarget.dataset.payload;
+        if (payload) {
+          const data = JSON.parse(decodeURIComponent(payload));
+          savedBooking = data;
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          showReceipt(data);
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-tamu-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        const payload = e.currentTarget.dataset.payload;
+        if (payload) {
+          const data = JSON.parse(decodeURIComponent(payload));
+          // Populate the modal
+          currentEditId = id;
+          document.getElementById('modal-booking-title').textContent = 'Edit Tamu';
+          formView.style.display = 'block';
+          receiptView.style.display = 'none';
+
+          document.getElementById('field-id-pesanan').value = data.idPesanan || '';
+          document.getElementById('field-nama').value = data.nama || '';
+          document.getElementById('field-telp').value = data.telp || '';
+          document.getElementById('field-tanggal').value = data.tanggal || '';
+          
+          // Select rafting type by text (since save only keeps the text we might need to find option)
+          const typeOpts = typeSelect.options;
+          for (let i = 0; i < typeOpts.length; i++) {
+            if (typeOpts[i].text === data.raftingType) {
+              typeSelect.selectedIndex = i;
+              break;
+            }
+          }
+          
+          document.getElementById('field-jumlah-perahu').value = data.jumlahPerahu || 0;
+          document.getElementById('field-harga').value = data.hargaPerKapal || 0;
+          document.getElementById('field-dp').value = data.dp || 0;
+
+          // Sesi
+          selectedSesi = data.sesiTrip || 'Pagi';
+          if (selectedSesi === 'Siang') {
+            document.getElementById('sesi-siang').classList.add('active');
+            document.getElementById('sesi-pagi').classList.remove('active');
+          } else {
+            document.getElementById('sesi-pagi').classList.add('active');
+            document.getElementById('sesi-siang').classList.remove('active');
+          }
+
+          // Metode
+          selectedMetode = data.metodeBayar || 'Cash';
+          if (selectedMetode === 'Transfer') {
+            document.getElementById('metode-transfer').classList.add('active');
+            document.getElementById('metode-cash').classList.remove('active');
+          } else {
+            document.getElementById('metode-cash').classList.add('active');
+            document.getElementById('metode-transfer').classList.remove('active');
+          }
+
+          // Tambahan
+          const tc = document.getElementById('tambahan-container');
+          tc.innerHTML = '';
+          tambahanCount = 0;
+          if (data.tambahan && data.tambahan.length > 0) {
+            tc.style.display = 'flex';
+            document.getElementById('tambahan-total-row').style.display = 'flex';
+            data.tambahan.forEach(t => {
+              const btnAddObj = document.getElementById('btn-tambahan');
+              // We simulate the click to generate the row, then populate it
+              btnAddObj.click();
+              const rows = document.querySelectorAll('.tambahan-row');
+              const lastRow = rows[rows.length - 1];
+              if (lastRow) {
+                const jSelect = lastRow.querySelector('.tambahan-jenis');
+                if (jSelect) jSelect.value = t.jenis;
+                const jQty = lastRow.querySelector('.tambahan-qty');
+                if (jQty) jQty.value = t.qty;
+                const jPrice = lastRow.querySelector('.tambahan-price');
+                if (jPrice) jPrice.value = t.harga;
+              }
+            });
+          } else {
+            tc.style.display = 'none';
+            document.getElementById('tambahan-total-row').style.display = 'none';
+          }
+
+          recalculate();
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+        }
+      });
+    });
+  }
+
+  async function loadTamuList() {
+    const listContainer = document.getElementById('tamu-list-container');
+    const dateInput = document.getElementById('tamu-date');
+    if (!listContainer || !dateInput) return;
+
+    listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>';
+
+    try {
+      const q = query(collection(db, 'bookings'), where('tanggal', '==', dateInput.value));
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Belum ada tamu di tanggal ini.</div>';
+        return;
+      }
+
+      // Sort in memory by createdAt descending
+      const bookings = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      bookings.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+
+      let html = '';
+      bookings.forEach(b => {
+        const dpStatusColor = b.kurangBayar > 0 ? 'var(--error)' : '#16a34a';
+        const dpStatusText = b.kurangBayar > 0 ? formatRp(b.dp) + ' (Belum Lunas)' : 'LUNAS';
+        const safePayload = encodeURIComponent(JSON.stringify(b));
+
+        html += `
+          <div style="background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-xl);padding:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-size:0.65rem;color:var(--outline);font-weight:700;letter-spacing:0.05em;margin-bottom:0.125rem;">${b.idPesanan}</div>
+                <div style="font-weight:800;color:var(--on-surface);font-size:1rem;">${b.nama}</div>
+                <div style="font-size:0.75rem;color:var(--outline);margin-top:0.125rem;"><span class="material-symbols-outlined" style="font-size:0.875rem;vertical-align:middle;">call</span> ${b.telp}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:0.75rem;font-weight:700;color:var(--primary);background:var(--tertiary-container);padding:0.125rem 0.5rem;border-radius:var(--radius-full);display:inline-block;">${b.sesiTrip}</div>
+                <div style="font-size:0.75rem;color:var(--on-surface-variant);font-weight:700;margin-top:0.25rem;">${b.jumlahPerahu} Kapal</div>
+              </div>
+            </div>
+            
+            <div style="background:var(--surface-container-low);border-radius:var(--radius-md);padding:0.625rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem;">
+              <div>
+                <div style="color:var(--outline);font-size:0.65rem;">PAKET</div>
+                <div style="font-weight:700;">${b.raftingType}</div>
+              </div>
+              <div>
+                <div style="color:var(--outline);font-size:0.65rem;">TOTAL BIAYA</div>
+                <div style="font-weight:800;color:var(--primary);">${formatRp(b.totalPesanan)}</div>
+              </div>
+              <div style="grid-column: span 2;">
+                <div style="color:var(--outline);font-size:0.65rem;">STATUS PEMBAYARAN</div>
+                <div style="font-weight:700;color:${dpStatusColor};">${dpStatusText}</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:0.5rem;margin-top:0.25rem;align-items:center;">
+              <button class="btn-tamu-edit" data-id="${b.id}" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:white;border:1px solid var(--outline);color:var(--outline);border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:1rem;">edit</span> Edit
+              </button>
+              <button class="btn-tamu-cetak" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:var(--primary);border:none;color:white;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:1rem;">print</span> Cetak
+              </button>
+              <button class="btn-tamu-hapus" data-id="${b.id}" style="width:2.25rem;height:2.25rem;padding:0;background:var(--error-container);border:none;color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                <span class="material-symbols-outlined" style="font-size:1.125rem;">delete</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      listContainer.innerHTML = html;
+      attachTamuEvents();
+
+    } catch (err) {
+      console.error('Error loadTamuList:', err);
+      listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--error);font-size:0.8125rem;">Gagal memuat data.</div>';
+    }
+  }
+
+  // Bind filter
+  document.getElementById('btn-tamu-filter')?.addEventListener('click', loadTamuList);
+  
+  // Initial load
+  loadTamuList();
 
   // Direct Bluetooth Thermal Print (Web Bluetooth API)
   document.getElementById('btn-cetak-bt')?.addEventListener('click', async () => {
