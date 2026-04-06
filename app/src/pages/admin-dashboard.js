@@ -181,10 +181,21 @@ function getModalHTML() {
               <div id="field-total" style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:0.875rem 1rem;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--primary);">Rp 0</div>
             </div>
             <div>
+              <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">TIPE PEMBAYARAN <span style="color:var(--error);">*</span></label>
+              <div class="role-toggle" style="margin-top:0.25rem;margin-bottom:0.75rem;">
+                <button type="button" class="role-toggle__btn active" data-tipe="DP" id="tipe-dp">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">payments</span> DP
+                </button>
+                <button type="button" class="role-toggle__btn" data-tipe="Lunas" id="tipe-lunas">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">check_circle</span> Bayar Penuh
+                </button>
+              </div>
+            </div>
+            <div id="container-dp">
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">DP (Rp) <span style="color:var(--error);">*</span></label>
               <input type="number" id="field-dp" class="input-field" placeholder="0" min="0" required>
             </div>
-            <div>
+            <div id="container-kurang-bayar">
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">KURANG BAYAR</label>
               <div id="field-kurang-bayar" style="background:var(--error-container);border-radius:var(--radius-xl);padding:0.875rem 1rem;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--on-error-container);">Rp 0</div>
             </div>
@@ -415,6 +426,7 @@ export function initAdminDashboard() {
   // State
   let selectedSesi = 'Pagi';
   let selectedMetode = 'Cash';
+  let selectedTipeBayar = 'DP';
   let savedBooking = null;
   let currentEditId = null;
 
@@ -472,10 +484,19 @@ export function initAdminDashboard() {
     document.getElementById('field-kurang-bayar').textContent = 'Rp 0';
     selectedSesi = 'Pagi';
     selectedMetode = 'Cash';
+    selectedTipeBayar = 'DP';
     document.getElementById('sesi-pagi')?.classList.add('active');
     document.getElementById('sesi-siang')?.classList.remove('active');
     document.getElementById('metode-cash')?.classList.add('active');
     document.getElementById('metode-transfer')?.classList.remove('active');
+    document.getElementById('tipe-dp')?.classList.add('active');
+    document.getElementById('tipe-lunas')?.classList.remove('active');
+    if(document.getElementById('container-dp')) document.getElementById('container-dp').style.display = 'block';
+    if(document.getElementById('container-kurang-bayar')) document.getElementById('container-kurang-bayar').style.display = 'block';
+    if(document.getElementById('field-dp')) {
+      document.getElementById('field-dp').required = true;
+      document.getElementById('field-dp').value = '';
+    }
     // Reset tambahan
     const tc = document.getElementById('tambahan-container');
     tc.innerHTML = '';
@@ -526,6 +547,27 @@ export function initAdminDashboard() {
     document.getElementById('metode-cash').classList.remove('active');
   });
 
+  // Tipe Bayar toggle
+  document.getElementById('tipe-dp')?.addEventListener('click', () => {
+    selectedTipeBayar = 'DP';
+    document.getElementById('tipe-dp').classList.add('active');
+    document.getElementById('tipe-lunas').classList.remove('active');
+    document.getElementById('container-dp').style.display = 'block';
+    document.getElementById('container-kurang-bayar').style.display = 'block';
+    document.getElementById('field-dp').required = true;
+    recalculate();
+  });
+  document.getElementById('tipe-lunas')?.addEventListener('click', () => {
+    selectedTipeBayar = 'Lunas';
+    document.getElementById('tipe-lunas').classList.add('active');
+    document.getElementById('tipe-dp').classList.remove('active');
+    document.getElementById('container-dp').style.display = 'none';
+    document.getElementById('container-kurang-bayar').style.display = 'none';
+    document.getElementById('field-dp').required = false;
+    document.getElementById('field-dp').value = '';
+    recalculate();
+  });
+
   // Auto-calculate total & kurang bayar
   const jumlahEl = document.getElementById('field-jumlah-perahu');
   const hargaEl = document.getElementById('field-harga');
@@ -548,10 +590,18 @@ export function initAdminDashboard() {
   function recalculate() {
     const jumlah = parseInt(jumlahEl?.value) || 0;
     const harga = parseInt(hargaEl?.value) || 0;
-    const dp = parseInt(dpEl?.value) || 0;
     const tambahanTotal = getTambahanTotal();
     const total = (jumlah * harga) + tambahanTotal;
-    const kurang = Math.max(0, total - dp);
+    let dp = parseInt(dpEl?.value) || 0;
+    let kurang = 0;
+    
+    if (selectedTipeBayar === 'Lunas') {
+      dp = total;
+      kurang = 0;
+    } else {
+      kurang = Math.max(0, total - dp);
+    }
+    
     if (totalEl) totalEl.textContent = formatRp(total);
     if (kurangEl) kurangEl.textContent = formatRp(kurang);
   }
@@ -628,10 +678,17 @@ export function initAdminDashboard() {
 
     const jumlah = parseInt(jumlahEl.value) || 0;
     const harga = parseInt(hargaEl.value) || 0;
-    const dp = parseInt(dpEl.value) || 0;
     const tambahanTotal = getTambahanTotal();
     const total = (jumlah * harga) + tambahanTotal;
-    const kurang = Math.max(0, total - dp);
+    let dp = parseInt(dpEl.value) || 0;
+    let kurang = 0;
+    
+    if (selectedTipeBayar === 'Lunas') {
+      dp = total;
+      kurang = 0;
+    } else {
+      kurang = Math.max(0, total - dp);
+    }
 
     // Collect tambahan items
     const tambahanItems = [];
@@ -654,6 +711,7 @@ export function initAdminDashboard() {
       tambahan: tambahanItems,
       tambahanTotal: tambahanTotal,
       totalPesanan: total,
+      tipePembayaran: selectedTipeBayar,
       dp: dp,
       kurangBayar: kurang,
       metodeBayar: selectedMetode,
@@ -708,6 +766,26 @@ export function initAdminDashboard() {
     document.getElementById('receipt-dp').textContent = formatRp(data.dp);
     document.getElementById('receipt-kurang').textContent = formatRp(data.kurangBayar);
     document.getElementById('receipt-metode').textContent = data.metodeBayar;
+
+    if (data.tipePembayaran === 'Lunas') {
+      document.getElementById('receipt-dp').parentNode.style.display = 'none';
+      document.getElementById('receipt-kurang').parentNode.style.display = 'none';
+      let lunasRow = document.getElementById('receipt-lunas-row');
+      if (!lunasRow) {
+        lunasRow = document.createElement('div');
+        lunasRow.id = 'receipt-lunas-row';
+        lunasRow.style.display = 'flex';
+        lunasRow.style.justifyContent = 'space-between';
+        lunasRow.innerHTML = `<span style="color:var(--outline);">Status</span><span style="font-weight:700;color:#16a34a;">LUNAS</span>`;
+        document.getElementById('receipt-dp').parentNode.parentNode.insertBefore(lunasRow, document.getElementById('receipt-dp').parentNode);
+      }
+      lunasRow.style.display = 'flex';
+    } else {
+      document.getElementById('receipt-dp').parentNode.style.display = 'flex';
+      document.getElementById('receipt-kurang').parentNode.style.display = 'flex';
+      let lunasRow = document.getElementById('receipt-lunas-row');
+      if (lunasRow) lunasRow.style.display = 'none';
+    }
 
     // Render tambahan in receipt
     const tSec = document.getElementById('receipt-tambahan-section');
@@ -782,8 +860,11 @@ export function initAdminDashboard() {
         ` : ''}
         <div class="divider"></div>
         <div class="row total-row"><span>TOTAL</span><span>${formatRp(savedBooking?.totalPesanan)}</span></div>
-        <div class="row"><span>DP</span><span class="bold" style="color:green;">${formatRp(savedBooking?.dp)}</span></div>
-        <div class="row"><span>Kurang Bayar</span><span class="bold" style="color:red;">${formatRp(savedBooking?.kurangBayar)}</span></div>
+        ${savedBooking?.tipePembayaran === 'Lunas' ? 
+        `<div class="row"><span>Status</span><span class="bold" style="color:green;">LUNAS</span></div>` : 
+        `<div class="row"><span>DP</span><span class="bold" style="color:green;">${formatRp(savedBooking?.dp)}</span></div>
+        <div class="row"><span>Kurang Bayar</span><span class="bold" style="color:red;">${formatRp(savedBooking?.kurangBayar)}</span></div>`
+        }
         <div class="row"><span>Metode</span><span class="bold">${savedBooking?.metodeBayar || ''}</span></div>
         <div class="divider"></div>
         <div class="center footer">
