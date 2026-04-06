@@ -24,7 +24,7 @@ export function renderAdminDashboard(user) {
             <span class="material-symbols-outlined" style="font-size:0.875rem;">calendar_today</span> ${todayStr}
           </span>
           <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.75rem;color:var(--secondary);background:var(--surface-container-low);padding:0.25rem 0.75rem;border-radius:var(--radius-full);">
-            <span class="material-symbols-outlined" style="font-size:0.875rem;">timer</span> <span id="session-timer">00:00:00</span>
+            <span class="material-symbols-outlined" style="font-size:0.875rem;">schedule</span> <span id="current-clock">00:00:00</span>
           </span>
         </div>
       </section>
@@ -274,17 +274,18 @@ export function initAdminDashboard() {
   const receiptView = document.getElementById('booking-receipt-view');
   if (!modal) return;
 
-  // ── SESSION TIMER ──
-  const sessionStart = Date.now();
-  const timerEl = document.getElementById('session-timer');
-  if (timerEl) {
-    setInterval(() => {
-      const diff = Math.floor((Date.now() - sessionStart) / 1000);
-      const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-      const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-      const s = String(diff % 60).padStart(2, '0');
-      timerEl.textContent = `${h}:${m}:${s}`;
-    }, 1000);
+  // ── CURRENT CLOCK ──
+  const clockEl = document.getElementById('current-clock');
+  if (clockEl) {
+    const updateClock = () => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      clockEl.textContent = `${h}:${m}:${s}`;
+    };
+    updateClock(); // set immediately
+    setInterval(updateClock, 1000);
   }
 
   // ── TODAY'S STATS ──
