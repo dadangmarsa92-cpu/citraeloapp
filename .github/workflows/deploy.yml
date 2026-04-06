@@ -25,16 +25,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache-v2: 'npm-cache' # Manually setting up cache if needed or use setup-node cache
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json # Path to package-lock.json
       - name: Install dependencies
+        working-directory: ./app # Run in the app subfolder
         run: npm install
       - name: Build
+        working-directory: ./app # Run in the app subfolder
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Specifies path to build output
-          path: ./dist
+          path: ./app/dist # Correct path in subfolder
 
   deploy:
     environment:
