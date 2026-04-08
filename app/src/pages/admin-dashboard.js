@@ -172,6 +172,10 @@ function getModalHTML() {
               </div>
             </div>
             <div>
+              <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">CATATAN (opsional)</label>
+              <textarea id="field-catatan" class="input-field" placeholder="Catatan tambahan pesanan..." rows="2" style="padding-top:0.75rem;resize:vertical;"></textarea>
+            </div>
+            <div>
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">TOTAL PESANAN</label>
               <div id="field-total" style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:0.875rem 1rem;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--primary);">Rp 0</div>
             </div>
@@ -635,6 +639,7 @@ export function initAdminDashboard() {
       tipePembayaran: selectedTipeBayar,
       dp: dp,
       kurangBayar: kurang,
+      catatan: document.getElementById('field-catatan')?.value || '',
       metodeBayar: selectedMetode,
     };
 

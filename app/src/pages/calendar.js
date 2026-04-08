@@ -56,9 +56,26 @@ export function renderCalendar(user) {
             </button>
           </div>
           <div id="popup-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;"></div>
-          <div id="popup-content"></div>
         </div>
       </div>
+
+      <!-- DAFTAR TAMU HARIAN -->
+      <section style="margin-top:0.5rem;padding-bottom:2rem;">
+        <div style="background:var(--surface-container-lowest);border-radius:var(--radius-xl);padding:1.5rem;box-shadow:var(--shadow-card);">
+           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:1.5rem;">
+             <div>
+               <h3 class="font-headline" style="font-size:1.125rem;font-weight:800;color:var(--primary);margin-bottom:0.125rem;">Daftar Tamu Harian</h3>
+               <p style="font-size:0.75rem;color:var(--outline);">Pilih tanggal untuk melihat rincian.</p>
+             </div>
+             <input type="date" id="cal-daily-picker" class="input-field" value="${now.toISOString().split('T')[0]}" style="width:160px;height:2.5rem;padding-left:1rem;font-size:0.8125rem;background:white;font-family:'Space Grotesk',sans-serif;font-weight:700;border:1px solid var(--outline-variant);cursor:pointer;">
+           </div>
+           
+           <div id="cal-daily-list" style="display:flex;flex-direction:column;gap:0.75rem;">
+             <!-- list goes here -->
+           </div>
+        </div>
+      </section>
+
     </div>
   `;
 }
@@ -307,6 +324,10 @@ function getEditModalHTML(booking) {
             <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">TOTAL PESANAN</label>
             <div id="edit-field-total" style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:0.875rem 1rem;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--primary);">Rp 0</div>
           </div>
+          <div>
+            <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">CATATAN (opsional)</label>
+            <textarea id="edit-field-catatan" class="input-field" placeholder="Catatan tambahan pesanan..." rows="2" style="padding-top:0.75rem;resize:vertical;padding-left:1rem;">${booking.catatan || ''}</textarea>
+          </div>
         </form>
 
         <!-- Action Buttons -->
@@ -428,6 +449,8 @@ function openEditBookingModal(booking) {
     saveBtn.style.pointerEvents = 'none';
 
     try {
+      const catatan = document.getElementById('edit-field-catatan')?.value || '';
+
       const bookingRef = doc(db, 'bookings', booking.id);
       const updates = {
         nama,
@@ -439,6 +462,7 @@ function openEditBookingModal(booking) {
         hargaPerKapal,
         sesiTrip: selectedSesi,
         totalHarga,
+        catatan
       };
 
       await updateDoc(bookingRef, updates);
@@ -601,10 +625,14 @@ function showCalendarToast(message) {
 
 export function initCalendar() {
 
+  const dailyPicker = document.getElementById('cal-daily-picker');
+  const dailyList = document.getElementById('cal-daily-list');
+
   // Load bookings WITH id
   getDocs(collection(db, 'bookings')).then(snap => {
     allBookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     buildCalendar();
+    if (dailyPicker?.value) renderDailyList(dailyPicker.value);
   }).catch(e => { console.error(e); buildCalendar(); });
 
   // Pre-load rafting types & tambahan types for edit modal
@@ -629,5 +657,90 @@ export function initCalendar() {
       document.getElementById('cal-popup').style.display = 'none';
       document.body.style.overflow = '';
     }
+  });
+
+  // Daily Picker Renderer
+  function renderDailyList(dateStr) {
+    if(!dailyList) return;
+    const bookings = allBookings.filter(b => b.tanggal === dateStr);
+    
+    if (bookings.length === 0) {
+      dailyList.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--outline);font-size:0.8125rem;">Tidak ada pesanan pada tanggal ini.</div>`;
+      return;
+    }
+
+    let html = '';
+    const pagi = bookings.filter(b => b.sesiTrip !== 'Siang');
+    const siang = bookings.filter(b => b.sesiTrip === 'Siang');
+
+    function renderList(sesi, arr) {
+      if(arr.length === 0) return '';
+      const c = sesi === 'Pagi' ? 'var(--primary)' : 'var(--secondary)';
+      const cm = sesi === 'Pagi' ? 'var(--primary-container)' : 'var(--secondary-container)';
+      const icon = sesi === 'Pagi' ? 'wb_sunny' : 'wb_twilight';
+      
+      let out = `<div style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:2px solid ${cm};">
+          <span class="material-symbols-outlined" style="color:${c};font-size:1.25rem;">${icon}</span>
+          <span style="font-weight:800;color:${c};font-size:0.875rem;">Sesi ${sesi}</span>
+        </div>`;
+
+      arr.forEach(b => {
+        let extrasStr = (b.tambahan || []).map(x => `${x.qty}x ${x.jenis}`).join(', ');
+        if(!extrasStr) extrasStr = '-';
+        const ctxHtml = b.catatan ? `<div style="background:var(--tertiary-container);color:var(--on-tertiary-container);padding:0.5rem;border-radius:var(--radius-sm);font-size:0.75rem;margin-top:0.25rem;"><strong>Catatan:</strong> <i>${b.catatan}</i></div>` : '';
+
+        out += `
+          <div style="padding:1rem;background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-xl);margin-bottom:0.75rem;display:flex;flex-direction:column;gap:0.5rem;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${c};"></div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+               <div>
+                  <h4 style="font-weight:800;font-size:1.0625rem;color:var(--on-surface);margin-bottom:0.125rem;">${b.nama || '-'}</h4>
+                  <p style="font-size:0.6875rem;color:var(--outline);font-weight:700;"><span class="material-symbols-outlined" style="font-size:0.75rem;vertical-align:middle;">call</span> ${b.telp || b.noTelp || '-'}</p>
+               </div>
+               <div style="text-align:right;">
+                  <span style="font-size:1.25rem;font-weight:800;color:${c};line-height:1;">${b.jumlahPerahu || 0}</span>
+                  <span style="font-size:0.5625rem;font-weight:800;color:var(--outline);display:block;letter-spacing:0.05em;">KAPAL</span>
+               </div>
+            </div>
+            <div style="background:var(--surface-container-low);border-radius:var(--radius-md);padding:0.75rem;font-size:0.75rem;color:var(--on-surface);display:flex;flex-direction:column;gap:0.5rem;margin-top:0.25rem;">
+               <div style="display:flex;justify-content:space-between;align-items:center;">
+                 <span style="color:var(--outline);font-size:0.6875rem;font-weight:700;">Paket</span>
+                 <span style="font-weight:800;">${b.raftingType || '-'}</span>
+               </div>
+               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                 <span style="color:var(--outline);font-size:0.6875rem;font-weight:700;">Tambahan</span>
+                 <span style="font-weight:700;text-align:right;max-width:60%;">${extrasStr}</span>
+               </div>
+               ${ctxHtml}
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:0.25rem;">
+               <button class="btn-cal-edit" data-id="${b.id}" style="padding:0.375rem 1rem;background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-full);font-size:0.6875rem;font-weight:800;color:var(--outline);cursor:pointer;display:flex;gap:0.375rem;align-items:center;transition:background 0.2s;">
+                  <span class="material-symbols-outlined" style="font-size:0.875rem;">edit</span> Edit Tamu
+               </button>
+            </div>
+          </div>
+        `;
+      });
+      out += '</div>';
+      return out;
+    }
+
+    html += renderList('Pagi', pagi);
+    html += renderList('Siang', siang);
+
+    dailyList.innerHTML = html;
+
+    dailyList.querySelectorAll('.btn-cal-edit').forEach(btn => {
+       btn.addEventListener('click', () => {
+         const id = btn.dataset.id;
+         const booking = allBookings.find(x => x.id === id);
+         if(booking) openEditBookingModal(booking);
+       });
+    });
+  }
+
+  dailyPicker?.addEventListener('change', (e) => {
+    if(e.target.value) renderDailyList(e.target.value);
   });
 }
