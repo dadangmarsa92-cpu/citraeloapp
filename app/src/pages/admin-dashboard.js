@@ -1301,12 +1301,12 @@ export function initAdminDashboard() {
       
       append([ESC, 0x61, 0x00]); // Align Left
 
-      function formatRow(nama, qty, status) {
-        // format: Nama (max 15), Qty (max 4), Status (max 11) => total 30 chars
-        const n = (nama || "").substring(0, 15).padEnd(15, ' ');
-        const q = String(qty).padStart(3, ' ') + "K";
-        const s = (status === 'Lunas' ? 'LUNAS' : 'HUTANG').padStart(11, ' ');
-        return n + " " + q + s + "\n";
+      function formatRow(nama, qty) {
+        // total 32 chars width
+        const suffix = `${qty} Kapal`;
+        const availSpace = 32 - suffix.length - 1; 
+        const n = (nama || "").substring(0, availSpace).padEnd(availSpace, ' ');
+        return n + " " + suffix + "\n";
       }
 
       let totalBoatsDaily = 0;
@@ -1317,19 +1317,21 @@ export function initAdminDashboard() {
         append([ESC, 0x21, 0x08]); // Bold
         addText(`SESI ${title.toUpperCase()}\n`);
         append([ESC, 0x21, 0x00]); // Normal
+        addText("--------------------------------\n");
         
-        // Col header
-        addText("NAMA            JML      STATUS\n");
         let sumBoats = 0;
+        let ordersSesi = 0;
         arr.forEach(b => {
-          const lunas = b.kurangBayar <= 0 ? 'Lunas' : 'Hutang';
-          addText(formatRow(b.nama, b.jumlahPerahu, lunas));
+          addText(formatRow(b.nama, b.jumlahPerahu));
           sumBoats += Number(b.jumlahPerahu);
+          ordersSesi++;
           totalOrdersDaily++;
         });
         totalBoatsDaily += sumBoats;
-        addText(`\nSubtotal Kapal: ${sumBoats}\n`);
+        
         addText("--------------------------------\n");
+        addText(`Total Tamu/Grup : ${ordersSesi}\n`);
+        addText(`Total Kapal     : ${sumBoats}\n\n`);
       }
 
       renderSesi('Pagi', pagi);
@@ -1337,8 +1339,10 @@ export function initAdminDashboard() {
 
       // SUMMARY
       append([ESC, 0x21, 0x08]); // Bold
-      addText(`TOTAL PESANAN: ${totalOrdersDaily}\n`);
-      addText(`TOTAL KAPAL  : ${totalBoatsDaily}\n`);
+      addText("REKAP KESELURUHAN HARI INI\n");
+      append([ESC, 0x21, 0x00]); // Normal
+      addText(`TOTAL TAMU/GRUP : ${totalOrdersDaily}\n`);
+      addText(`TOTAL KAPAL     : ${totalBoatsDaily}\n`);
       append([ESC, 0x21, 0x00]); // Normal
 
       addText("\n");
