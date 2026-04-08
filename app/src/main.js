@@ -74,7 +74,7 @@ function renderApp() {
 
     // Role-based route guard: users can only access dashboard & calendar
     const isAdmin = user?.role === 'admin';
-    if (!isAdmin && !['/dashboard', '/calendar'].includes(hash)) {
+    if (!isAdmin && !['/dashboard', '/calendar', '/profile'].includes(hash)) {
       navigate('/dashboard');
       return;
     }
