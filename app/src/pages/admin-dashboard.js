@@ -2,7 +2,7 @@
  * Admin Dashboard Page — CitraElo Rafting
  */
 import { db } from '../firebase/config.js';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { loadRaftingTypes, loadTambahanTypes } from './settings.js';
 
 export function renderAdminDashboard(user) {
@@ -24,7 +24,7 @@ export function renderAdminDashboard(user) {
             <span class="material-symbols-outlined" style="font-size:0.875rem;">calendar_today</span> ${todayStr}
           </span>
           <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.75rem;color:var(--secondary);background:var(--surface-container-low);padding:0.25rem 0.75rem;border-radius:var(--radius-full);">
-            <span class="material-symbols-outlined" style="font-size:0.875rem;">timer</span> <span id="session-timer">00:00:00</span>
+            <span class="material-symbols-outlined" style="font-size:0.875rem;">schedule</span> <span id="current-clock">00:00:00</span>
           </span>
         </div>
       </section>
@@ -83,6 +83,24 @@ export function renderAdminDashboard(user) {
           <canvas id="chart-orders" style="width:100%;height:200px;"></canvas>
         </div>
       </section>
+
+      <!-- Data Tamu Section -->
+      <section style="margin-top:0.5rem;padding-bottom:2rem;">
+        <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.75rem;">Data Tamu</h3>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:flex-end;">
+          <div style="flex:1;">
+            <label class="label-xs" style="display:block;color:var(--outline);margin-bottom:0.25rem;">TANGGAL KUNJUNGAN</label>
+            <input type="date" id="tamu-date" class="input-field" value="${today}" style="padding-left:0.75rem;height:2.25rem;font-size:0.75rem;">
+          </div>
+          <button id="btn-tamu-filter" style="height:2.25rem;padding:0 1rem;background:var(--primary);color:white;border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;">
+            <span class="material-symbols-outlined" style="font-size:0.875rem;">search</span> Cari
+          </button>
+        </div>
+        <div id="tamu-list-container" style="display:grid;grid-template-columns:1fr;gap:0.75rem;">
+          <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+        </div>
+      </section>
+
     </div>
   `;
 }
@@ -97,7 +115,7 @@ function getModalHTML() {
         <div id="booking-form-view">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
             <div>
-              <h2 class="font-headline" style="font-size:1.5rem;font-weight:700;color:var(--primary);">Tambah Tamu</h2>
+              <h2 id="modal-booking-title" class="font-headline" style="font-size:1.5rem;font-weight:700;color:var(--primary);">Tambah Tamu</h2>
               <p style="font-size:0.75rem;color:var(--outline);margin-top:0.25rem;">Isi data pesanan pelanggan</p>
             </div>
             <button id="btn-modal-close" style="width:2.5rem;height:2.5rem;border-radius:50%;background:var(--surface-container-high);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--outline);">
@@ -163,10 +181,21 @@ function getModalHTML() {
               <div id="field-total" style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:0.875rem 1rem;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--primary);">Rp 0</div>
             </div>
             <div>
+              <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">TIPE PEMBAYARAN <span style="color:var(--error);">*</span></label>
+              <div class="role-toggle" style="margin-top:0.25rem;margin-bottom:0.75rem;">
+                <button type="button" class="role-toggle__btn active" data-tipe="DP" id="tipe-dp">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">payments</span> DP
+                </button>
+                <button type="button" class="role-toggle__btn" data-tipe="Lunas" id="tipe-lunas">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">check_circle</span> Bayar Penuh
+                </button>
+              </div>
+            </div>
+            <div id="container-dp">
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">DP (Rp) <span style="color:var(--error);">*</span></label>
               <input type="number" id="field-dp" class="input-field" placeholder="0" min="0" required>
             </div>
-            <div>
+            <div id="container-kurang-bayar">
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">KURANG BAYAR</label>
               <div id="field-kurang-bayar" style="background:var(--error-container);border-radius:var(--radius-xl);padding:0.875rem 1rem;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;color:var(--on-error-container);">Rp 0</div>
             </div>
@@ -226,11 +255,14 @@ function getModalHTML() {
               <p style="font-size:0.65rem;color:var(--outline);margin-top:0.25rem;">— Safe Rivers, Great Adventures —</p>
             </div>
           </div>
-          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
-            <button type="button" id="btn-cetak" class="btn btn--gradient" style="flex:2;height:auto;padding:0.875rem;font-size:0.875rem;">
-              <span class="material-symbols-outlined" style="font-size:1.125rem;">print</span> Cetak Struk
+          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;">
+            <button type="button" id="btn-cetak-bt" style="flex:1;min-width:140px;height:auto;padding:0.875rem;font-size:0.875rem;background:var(--tertiary-container);color:var(--on-tertiary-container);border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">bluetooth</span> Bluetooth Thermal
             </button>
-            <button type="button" id="btn-tutup" style="flex:1;padding:0.875rem;border:1px solid var(--outline-variant);background:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--outline);cursor:pointer;font-size:0.875rem;">Tutup</button>
+            <button type="button" id="btn-cetak" class="btn btn--gradient" style="flex:1;min-width:140px;height:auto;padding:0.875rem;font-size:0.875rem;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">print</span> Cetak Struk (PDF)
+            </button>
+            <button type="button" id="btn-tutup" style="flex:1;min-width:100px;padding:0.875rem;border:1px solid var(--outline-variant);background:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--outline);cursor:pointer;font-size:0.875rem;">Tutup</button>
           </div>
         </div>
       </div>
@@ -253,17 +285,18 @@ export function initAdminDashboard() {
   const receiptView = document.getElementById('booking-receipt-view');
   if (!modal) return;
 
-  // ── SESSION TIMER ──
-  const sessionStart = Date.now();
-  const timerEl = document.getElementById('session-timer');
-  if (timerEl) {
-    setInterval(() => {
-      const diff = Math.floor((Date.now() - sessionStart) / 1000);
-      const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-      const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-      const s = String(diff % 60).padStart(2, '0');
-      timerEl.textContent = `${h}:${m}:${s}`;
-    }, 1000);
+  // ── CURRENT CLOCK ──
+  const clockEl = document.getElementById('current-clock');
+  if (clockEl) {
+    const updateClock = () => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      clockEl.textContent = `${h}:${m}:${s}`;
+    };
+    updateClock(); // set immediately
+    setInterval(updateClock, 1000);
   }
 
   // ── TODAY'S STATS ──
@@ -393,7 +426,9 @@ export function initAdminDashboard() {
   // State
   let selectedSesi = 'Pagi';
   let selectedMetode = 'Cash';
+  let selectedTipeBayar = 'DP';
   let savedBooking = null;
+  let currentEditId = null;
 
   // Generate ID
   function generateOrderId() {
@@ -434,8 +469,10 @@ export function initAdminDashboard() {
     }
   });
 
-  // Open modal
+  // Open modal for new booking
   document.getElementById('btn-tambah-tamu')?.addEventListener('click', () => {
+    currentEditId = null;
+    document.getElementById('modal-booking-title').textContent = 'Tambah Tamu';
     formView.style.display = 'block';
     receiptView.style.display = 'none';
     document.getElementById('form-booking').reset();
@@ -447,10 +484,19 @@ export function initAdminDashboard() {
     document.getElementById('field-kurang-bayar').textContent = 'Rp 0';
     selectedSesi = 'Pagi';
     selectedMetode = 'Cash';
+    selectedTipeBayar = 'DP';
     document.getElementById('sesi-pagi')?.classList.add('active');
     document.getElementById('sesi-siang')?.classList.remove('active');
     document.getElementById('metode-cash')?.classList.add('active');
     document.getElementById('metode-transfer')?.classList.remove('active');
+    document.getElementById('tipe-dp')?.classList.add('active');
+    document.getElementById('tipe-lunas')?.classList.remove('active');
+    if(document.getElementById('container-dp')) document.getElementById('container-dp').style.display = 'block';
+    if(document.getElementById('container-kurang-bayar')) document.getElementById('container-kurang-bayar').style.display = 'block';
+    if(document.getElementById('field-dp')) {
+      document.getElementById('field-dp').required = true;
+      document.getElementById('field-dp').value = '';
+    }
     // Reset tambahan
     const tc = document.getElementById('tambahan-container');
     tc.innerHTML = '';
@@ -501,6 +547,27 @@ export function initAdminDashboard() {
     document.getElementById('metode-cash').classList.remove('active');
   });
 
+  // Tipe Bayar toggle
+  document.getElementById('tipe-dp')?.addEventListener('click', () => {
+    selectedTipeBayar = 'DP';
+    document.getElementById('tipe-dp').classList.add('active');
+    document.getElementById('tipe-lunas').classList.remove('active');
+    document.getElementById('container-dp').style.display = 'block';
+    document.getElementById('container-kurang-bayar').style.display = 'block';
+    document.getElementById('field-dp').required = true;
+    recalculate();
+  });
+  document.getElementById('tipe-lunas')?.addEventListener('click', () => {
+    selectedTipeBayar = 'Lunas';
+    document.getElementById('tipe-lunas').classList.add('active');
+    document.getElementById('tipe-dp').classList.remove('active');
+    document.getElementById('container-dp').style.display = 'none';
+    document.getElementById('container-kurang-bayar').style.display = 'none';
+    document.getElementById('field-dp').required = false;
+    document.getElementById('field-dp').value = '';
+    recalculate();
+  });
+
   // Auto-calculate total & kurang bayar
   const jumlahEl = document.getElementById('field-jumlah-perahu');
   const hargaEl = document.getElementById('field-harga');
@@ -523,10 +590,18 @@ export function initAdminDashboard() {
   function recalculate() {
     const jumlah = parseInt(jumlahEl?.value) || 0;
     const harga = parseInt(hargaEl?.value) || 0;
-    const dp = parseInt(dpEl?.value) || 0;
     const tambahanTotal = getTambahanTotal();
     const total = (jumlah * harga) + tambahanTotal;
-    const kurang = Math.max(0, total - dp);
+    let dp = parseInt(dpEl?.value) || 0;
+    let kurang = 0;
+    
+    if (selectedTipeBayar === 'Lunas') {
+      dp = total;
+      kurang = 0;
+    } else {
+      kurang = Math.max(0, total - dp);
+    }
+    
     if (totalEl) totalEl.textContent = formatRp(total);
     if (kurangEl) kurangEl.textContent = formatRp(kurang);
   }
@@ -603,10 +678,17 @@ export function initAdminDashboard() {
 
     const jumlah = parseInt(jumlahEl.value) || 0;
     const harga = parseInt(hargaEl.value) || 0;
-    const dp = parseInt(dpEl.value) || 0;
     const tambahanTotal = getTambahanTotal();
     const total = (jumlah * harga) + tambahanTotal;
-    const kurang = Math.max(0, total - dp);
+    let dp = parseInt(dpEl.value) || 0;
+    let kurang = 0;
+    
+    if (selectedTipeBayar === 'Lunas') {
+      dp = total;
+      kurang = 0;
+    } else {
+      kurang = Math.max(0, total - dp);
+    }
 
     // Collect tambahan items
     const tambahanItems = [];
@@ -629,18 +711,32 @@ export function initAdminDashboard() {
       tambahan: tambahanItems,
       tambahanTotal: tambahanTotal,
       totalPesanan: total,
+      tipePembayaran: selectedTipeBayar,
       dp: dp,
       kurangBayar: kurang,
       metodeBayar: selectedMetode,
     };
 
     try {
-      // Save to Firestore
-      await addDoc(collection(db, 'bookings'), {
-        ...savedBooking,
-        createdAt: serverTimestamp(),
-        status: dp >= total ? 'paid' : 'pending'
-      });
+      if (currentEditId) {
+        // Update to Firestore
+        await updateDoc(doc(db, 'bookings', currentEditId), {
+          ...savedBooking,
+          updatedAt: serverTimestamp(),
+          status: dp >= total ? 'paid' : 'pending'
+        });
+      } else {
+        // Save new to Firestore
+        await addDoc(collection(db, 'bookings'), {
+          ...savedBooking,
+          createdAt: serverTimestamp(),
+          status: dp >= total ? 'paid' : 'pending'
+        });
+      }
+
+      // Refresh list
+      loadTamuList();
+      loadTodayStats();
 
       // Show receipt
       showReceipt(savedBooking);
@@ -670,6 +766,26 @@ export function initAdminDashboard() {
     document.getElementById('receipt-dp').textContent = formatRp(data.dp);
     document.getElementById('receipt-kurang').textContent = formatRp(data.kurangBayar);
     document.getElementById('receipt-metode').textContent = data.metodeBayar;
+
+    if (data.tipePembayaran === 'Lunas') {
+      document.getElementById('receipt-dp').parentNode.style.display = 'none';
+      document.getElementById('receipt-kurang').parentNode.style.display = 'none';
+      let lunasRow = document.getElementById('receipt-lunas-row');
+      if (!lunasRow) {
+        lunasRow = document.createElement('div');
+        lunasRow.id = 'receipt-lunas-row';
+        lunasRow.style.display = 'flex';
+        lunasRow.style.justifyContent = 'space-between';
+        lunasRow.innerHTML = `<span style="color:var(--outline);">Status</span><span style="font-weight:700;color:#16a34a;">LUNAS</span>`;
+        document.getElementById('receipt-dp').parentNode.parentNode.insertBefore(lunasRow, document.getElementById('receipt-dp').parentNode);
+      }
+      lunasRow.style.display = 'flex';
+    } else {
+      document.getElementById('receipt-dp').parentNode.style.display = 'flex';
+      document.getElementById('receipt-kurang').parentNode.style.display = 'flex';
+      let lunasRow = document.getElementById('receipt-lunas-row');
+      if (lunasRow) lunasRow.style.display = 'none';
+    }
 
     // Render tambahan in receipt
     const tSec = document.getElementById('receipt-tambahan-section');
@@ -744,8 +860,11 @@ export function initAdminDashboard() {
         ` : ''}
         <div class="divider"></div>
         <div class="row total-row"><span>TOTAL</span><span>${formatRp(savedBooking?.totalPesanan)}</span></div>
-        <div class="row"><span>DP</span><span class="bold" style="color:green;">${formatRp(savedBooking?.dp)}</span></div>
-        <div class="row"><span>Kurang Bayar</span><span class="bold" style="color:red;">${formatRp(savedBooking?.kurangBayar)}</span></div>
+        ${savedBooking?.tipePembayaran === 'Lunas' ? 
+        `<div class="row"><span>Status</span><span class="bold" style="color:green;">LUNAS</span></div>` : 
+        `<div class="row"><span>DP</span><span class="bold" style="color:green;">${formatRp(savedBooking?.dp)}</span></div>
+        <div class="row"><span>Kurang Bayar</span><span class="bold" style="color:red;">${formatRp(savedBooking?.kurangBayar)}</span></div>`
+        }
         <div class="row"><span>Metode</span><span class="bold">${savedBooking?.metodeBayar || ''}</span></div>
         <div class="divider"></div>
         <div class="center footer">
@@ -767,4 +886,355 @@ export function initAdminDashboard() {
       setTimeout(() => printWindow.print(), 300);
     };
   });
+
+  // ── DATA TAMU LIST ──
+  // Function to attach edit, delete, and print events to dynamically created cards
+  function attachTamuEvents() {
+    document.querySelectorAll('.btn-tamu-hapus').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('Yakin ingin menghapus data tamu ini? Data akan hilang selamanya.')) {
+          try {
+            await deleteDoc(doc(db, 'bookings', id));
+            loadTamuList();
+            loadTodayStats();
+          } catch (err) {
+            alert('Gagal menghapus: ' + err.message);
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-tamu-cetak').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const payload = e.currentTarget.dataset.payload;
+        if (payload) {
+          const data = JSON.parse(decodeURIComponent(payload));
+          savedBooking = data;
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          showReceipt(data);
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-tamu-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        const payload = e.currentTarget.dataset.payload;
+        if (payload) {
+          const data = JSON.parse(decodeURIComponent(payload));
+          // Populate the modal
+          currentEditId = id;
+          document.getElementById('modal-booking-title').textContent = 'Edit Tamu';
+          formView.style.display = 'block';
+          receiptView.style.display = 'none';
+
+          document.getElementById('field-id-pesanan').value = data.idPesanan || '';
+          document.getElementById('field-nama').value = data.nama || '';
+          document.getElementById('field-telp').value = data.telp || '';
+          document.getElementById('field-tanggal').value = data.tanggal || '';
+          
+          // Select rafting type by text (since save only keeps the text we might need to find option)
+          const typeOpts = typeSelect.options;
+          for (let i = 0; i < typeOpts.length; i++) {
+            if (typeOpts[i].text === data.raftingType) {
+              typeSelect.selectedIndex = i;
+              break;
+            }
+          }
+          
+          document.getElementById('field-jumlah-perahu').value = data.jumlahPerahu || 0;
+          document.getElementById('field-harga').value = data.hargaPerKapal || 0;
+          document.getElementById('field-dp').value = data.dp || 0;
+
+          // Sesi
+          selectedSesi = data.sesiTrip || 'Pagi';
+          if (selectedSesi === 'Siang') {
+            document.getElementById('sesi-siang').classList.add('active');
+            document.getElementById('sesi-pagi').classList.remove('active');
+          } else {
+            document.getElementById('sesi-pagi').classList.add('active');
+            document.getElementById('sesi-siang').classList.remove('active');
+          }
+
+          // Metode
+          selectedMetode = data.metodeBayar || 'Cash';
+          if (selectedMetode === 'Transfer') {
+            document.getElementById('metode-transfer').classList.add('active');
+            document.getElementById('metode-cash').classList.remove('active');
+          } else {
+            document.getElementById('metode-cash').classList.add('active');
+            document.getElementById('metode-transfer').classList.remove('active');
+          }
+
+          // Tambahan
+          const tc = document.getElementById('tambahan-container');
+          tc.innerHTML = '';
+          tambahanCount = 0;
+          if (data.tambahan && data.tambahan.length > 0) {
+            tc.style.display = 'flex';
+            document.getElementById('tambahan-total-row').style.display = 'flex';
+            data.tambahan.forEach(t => {
+              const btnAddObj = document.getElementById('btn-tambahan');
+              // We simulate the click to generate the row, then populate it
+              btnAddObj.click();
+              const rows = document.querySelectorAll('.tambahan-row');
+              const lastRow = rows[rows.length - 1];
+              if (lastRow) {
+                const jSelect = lastRow.querySelector('.tambahan-jenis');
+                if (jSelect) jSelect.value = t.jenis;
+                const jQty = lastRow.querySelector('.tambahan-qty');
+                if (jQty) jQty.value = t.qty;
+                const jPrice = lastRow.querySelector('.tambahan-price');
+                if (jPrice) jPrice.value = t.harga;
+              }
+            });
+          } else {
+            tc.style.display = 'none';
+            document.getElementById('tambahan-total-row').style.display = 'none';
+          }
+
+          recalculate();
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+        }
+      });
+    });
+  }
+
+  async function loadTamuList() {
+    const listContainer = document.getElementById('tamu-list-container');
+    const dateInput = document.getElementById('tamu-date');
+    if (!listContainer || !dateInput) return;
+
+    listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>';
+
+    try {
+      const q = query(collection(db, 'bookings'), where('tanggal', '==', dateInput.value));
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Belum ada tamu di tanggal ini.</div>';
+        return;
+      }
+
+      // Sort in memory by createdAt descending
+      const bookings = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      bookings.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+
+      let html = '';
+      bookings.forEach(b => {
+        const dpStatusColor = b.kurangBayar > 0 ? 'var(--error)' : '#16a34a';
+        const dpStatusText = b.kurangBayar > 0 ? formatRp(b.dp) + ' (Belum Lunas)' : 'LUNAS';
+        const safePayload = encodeURIComponent(JSON.stringify(b));
+
+        html += `
+          <div style="background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-xl);padding:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-size:0.65rem;color:var(--outline);font-weight:700;letter-spacing:0.05em;margin-bottom:0.125rem;">${b.idPesanan}</div>
+                <div style="font-weight:800;color:var(--on-surface);font-size:1rem;">${b.nama}</div>
+                <div style="font-size:0.75rem;color:var(--outline);margin-top:0.125rem;"><span class="material-symbols-outlined" style="font-size:0.875rem;vertical-align:middle;">call</span> ${b.telp}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:0.75rem;font-weight:700;color:var(--primary);background:var(--tertiary-container);padding:0.125rem 0.5rem;border-radius:var(--radius-full);display:inline-block;">${b.sesiTrip}</div>
+                <div style="font-size:0.75rem;color:var(--on-surface-variant);font-weight:700;margin-top:0.25rem;">${b.jumlahPerahu} Kapal</div>
+              </div>
+            </div>
+            
+            <div style="background:var(--surface-container-low);border-radius:var(--radius-md);padding:0.625rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem;">
+              <div>
+                <div style="color:var(--outline);font-size:0.65rem;">PAKET</div>
+                <div style="font-weight:700;">${b.raftingType}</div>
+              </div>
+              <div>
+                <div style="color:var(--outline);font-size:0.65rem;">TOTAL BIAYA</div>
+                <div style="font-weight:800;color:var(--primary);">${formatRp(b.totalPesanan)}</div>
+              </div>
+              <div style="grid-column: span 2;">
+                <div style="color:var(--outline);font-size:0.65rem;">STATUS PEMBAYARAN</div>
+                <div style="font-weight:700;color:${dpStatusColor};">${dpStatusText}</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:0.5rem;margin-top:0.25rem;align-items:center;">
+              <button class="btn-tamu-edit" data-id="${b.id}" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:white;border:1px solid var(--outline);color:var(--outline);border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:1rem;">edit</span> Edit
+              </button>
+              <button class="btn-tamu-cetak" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:var(--primary);border:none;color:white;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:1rem;">print</span> Cetak
+              </button>
+              <button class="btn-tamu-hapus" data-id="${b.id}" style="width:2.25rem;height:2.25rem;padding:0;background:var(--error-container);border:none;color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                <span class="material-symbols-outlined" style="font-size:1.125rem;">delete</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      listContainer.innerHTML = html;
+      attachTamuEvents();
+
+    } catch (err) {
+      console.error('Error loadTamuList:', err);
+      listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--error);font-size:0.8125rem;">Gagal memuat data.</div>';
+    }
+  }
+
+  // Bind filter
+  document.getElementById('btn-tamu-filter')?.addEventListener('click', loadTamuList);
+  
+  // Initial load
+  loadTamuList();
+
+  // Direct Bluetooth Thermal Print (Web Bluetooth API)
+  document.getElementById('btn-cetak-bt')?.addEventListener('click', async () => {
+    if (!navigator.bluetooth) {
+      alert('Browser ini tidak mendukung Web Bluetooth. Gunakan Chrome di Android/PC.');
+      return;
+    }
+
+    try {
+      const btnBt = document.getElementById('btn-cetak-bt');
+      const originalText = btnBt.innerHTML;
+      btnBt.innerHTML = '<div class="spinner" style="width:1.25rem;height:1.25rem;border-width:2px;border-color:var(--on-tertiary-container);border-bottom-color:transparent;"></div> Menghubungkan...';
+      btnBt.disabled = true;
+
+      // Request BT device
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+        optionalServices: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      }).catch(err => {
+        // Fallback filter if the specific receipt printer service doesn't match
+        return navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+        });
+      });
+
+      const server = await device.gatt.connect();
+      
+      // Get primary service (common for thermal printers)
+      const serviceUUIDs = ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
+      let service = null;
+      for (const uuid of serviceUUIDs) {
+        try {
+          service = await server.getPrimaryService(uuid);
+          if (service) break;
+        } catch (e) { /* ignore and try next */ }
+      }
+      
+      if (!service) {
+        throw new Error("Layanan printer tidak ditemukan.");
+      }
+
+      // Get characteristic for writing
+      const characteristics = await service.getCharacteristics();
+      const writeChar = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+
+      if (!writeChar) {
+        throw new Error("Karakteristik penulisan data tidak ditemukan.");
+      }
+
+      // Build ESC/POS payload
+      const encoder = new TextEncoder();
+      let payload = new Uint8Array();
+
+      function append(bytes) {
+        const temp = new Uint8Array(payload.length + bytes.length);
+        temp.set(payload);
+        temp.set(bytes, payload.length);
+        payload = temp;
+      }
+      
+      function addText(text) { append(encoder.encode(text)); }
+
+      const ESC = 0x1B;
+      const GS = 0x1D;
+
+      // INIT
+      append([ESC, 0x40]); 
+      
+      // HEADER
+      append([ESC, 0x61, 0x01]); // Align Center
+      append([ESC, 0x21, 0x08]); // Bold
+      addText("CITRAELO RAFTING\n");
+      append([ESC, 0x21, 0x00]); // Normal
+      addText("Struk Pemesanan\n");
+      addText(`${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}\n`);
+      addText("--------------------------------\n"); // 32 chars width (58mm)
+      
+      // BODY
+      append([ESC, 0x61, 0x00]); // Align Left
+
+      // Helper for key-value layout
+      function addKv(k, v) {
+        const width = 32;
+        let strK = (k || "").substring(0, 15);
+        let strV = (v || "").toString().substring(0, 16);
+        let spaces = width - strK.length - strV.length;
+        if (spaces < 1) spaces = 1;
+        addText(strK + " ".repeat(spaces) + strV + "\n");
+      }
+
+      addKv("ID Pesanan", savedBooking?.idPesanan);
+      addKv("Nama", savedBooking?.nama);
+      addKv("No.Telp", savedBooking?.telp);
+      const bookingDate = savedBooking?.tanggal ? new Date(savedBooking.tanggal).toLocaleDateString('id-ID') : '';
+      addKv("Tanggal", bookingDate);
+      addKv("Jml Perahu", `${savedBooking?.jumlahPerahu} kapal`);
+      addKv("Sesi", savedBooking?.sesiTrip);
+      addKv("Harga/Kpl", formatRp(savedBooking?.hargaPerKapal));
+      
+      if (savedBooking?.tambahan && savedBooking.tambahan.length > 0) {
+        addText("--------------------------------\n");
+        append([ESC, 0x21, 0x08]); // Bold
+        addText("TAMBAHAN\n");
+        append([ESC, 0x21, 0x00]); // Normal
+        savedBooking.tambahan.forEach(t => {
+          addKv(`${t.jenis} (${t.qty}x)`, formatRp(t.subtotal));
+        });
+      }
+
+      // FOOTER
+      addText("--------------------------------\n");
+      append([ESC, 0x21, 0x08]); // Bold
+      addKv("TOTAL", formatRp(savedBooking?.totalPesanan));
+      append([ESC, 0x21, 0x00]); // Normal
+      
+      addKv("DP", formatRp(savedBooking?.dp));
+      addKv("Kurang", formatRp(savedBooking?.kurangBayar));
+      addKv("Metode", savedBooking?.metodeBayar);
+
+      addText("\n");
+      append([ESC, 0x61, 0x01]); // Align Center
+      addText("Terima kasih telah memilih\nCitraElo Rafting!\n");
+      addText("- Safe Rivers, Great Adventures -\n");
+      addText("\n\n\n\n"); // Feed paper
+
+      // Send in chunks (max 512 bytes per write usually requested for BT GATT)
+      const chunkSize = 256;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        await writeChar.writeValue(chunk);
+      }
+
+      btnBt.innerHTML = originalText;
+      btnBt.disabled = false;
+      alert("Cetak berhasil!");
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('btn-cetak-bt').innerHTML = '<span class="material-symbols-outlined" style="font-size:1.125rem;">bluetooth</span> Bluetooth Thermal';
+      document.getElementById('btn-cetak-bt').disabled = false;
+      if (e.name !== 'NotFoundError') {
+        alert("Gagal mencetak: " + e.message);
+      }
+    }
+  });
+
 }

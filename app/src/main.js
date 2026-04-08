@@ -9,7 +9,7 @@ import { renderLogin, initLoginPage } from './pages/login.js';
 import { renderUserDashboard, initUserDashboard } from './pages/user-dashboard.js';
 import { renderAdminDashboard, initAdminDashboard } from './pages/admin-dashboard.js';
 import { renderCalendar, initCalendar } from './pages/calendar.js';
-import { renderReports } from './pages/reports.js';
+import { renderReports, initReports } from './pages/reports.js';
 import { renderProfile, initProfilePage } from './pages/profile.js';
 import { renderSettings, initSettings } from './pages/settings.js';
 import { seedDemoData } from './firebase/firestore.js';
@@ -94,6 +94,7 @@ function renderApp() {
         break;
       case '/reports':
         content = renderReports(user);
+        afterRender = () => initReports();
         break;
       case '/profile':
         content = renderProfile(user);
