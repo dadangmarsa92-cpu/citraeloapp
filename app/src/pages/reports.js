@@ -38,7 +38,24 @@ export function renderReports(user) {
           <input type="checkbox" id="rep-filter-piutang" style="width:1.25rem;height:1.25rem;accent-color:var(--error);cursor:pointer;">
           <label for="rep-filter-piutang" style="font-size:0.8125rem;font-weight:700;color:var(--on-surface-variant);cursor:pointer;">Hanya Tampilkan Transaksi Piutang (Belum Lunas)</label>
         </div>
+        
+        <!-- TABS -->
+        <div class="role-toggle" style="margin-top:-0.25rem; flex:1; display:flex;">
+          <button type="button" class="role-toggle__btn active" id="tab-rep-keuangan" style="cursor:pointer; flex:1; justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:1.125rem;">account_balance_wallet</span> Detail Keuangan
+          </button>
+          <button type="button" class="role-toggle__btn" id="tab-rep-grafik" style="cursor:pointer; flex:1; justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:1.125rem;">bar_chart</span> Grafik Analitik
+          </button>
+          <button type="button" class="role-toggle__btn" id="tab-rep-tamu" style="cursor:pointer; flex:1; justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:1.125rem;">group</span> Data Tamu
+          </button>
+        </div>
       </section>
+
+      <!-- TAB KEUANGAN -->
+      <div id="rep-sec-keuangan" style="display:block;">
+
 
       <!-- KPI Cards -->
       <section style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
@@ -58,6 +75,10 @@ export function renderReports(user) {
           <h3 class="font-headline" id="rep-total-piutang" style="font-size:1.75rem;font-weight:800;color:var(--on-error-container);">Rp 0</h3>
         </div>
       </section>
+      </div>
+
+      <!-- TAB GRAFIK -->
+      <div id="rep-sec-grafik" style="display:none;">
 
       <!-- Chart Pesanan & Kapal -->
       <section class="card" style="padding:1.5rem;margin-bottom:1rem;">
@@ -78,6 +99,10 @@ export function renderReports(user) {
           <canvas id="rep-chart" style="width:100%;height:100%;"></canvas>
         </div>
       </section>
+      </div>
+
+      <!-- TAB TAMU -->
+      <div id="rep-sec-tamu" style="display:none;">
 
       <!-- Data Table -->
       <section class="card" style="padding:1.5rem;overflow-x:auto;">
@@ -110,6 +135,7 @@ export function renderReports(user) {
           </tbody>
         </table>
       </section>
+      </div>
 
     </div>
   `;
@@ -123,6 +149,38 @@ export function initReports() {
   const dateTo = document.getElementById('rep-to');
   const chkPiutang = document.getElementById('rep-filter-piutang');
   
+  // Tab Elements
+  const tabKeu = document.getElementById('tab-rep-keuangan');
+  const tabGrafik = document.getElementById('tab-rep-grafik');
+  const tabTamu = document.getElementById('tab-rep-tamu');
+  const secKeu = document.getElementById('rep-sec-keuangan');
+  const secGrafik = document.getElementById('rep-sec-grafik');
+  const secTamu = document.getElementById('rep-sec-tamu');
+
+  function switchRepTab(activeId) {
+    if(!tabKeu) return;
+    [tabKeu, tabGrafik, tabTamu].forEach(t => t.classList.remove('active'));
+    [secKeu, secGrafik, secTamu].forEach(s => { s.style.display = 'none'; s.style.animation = ''; });
+    
+    if (activeId === 'keuangan') {
+      tabKeu.classList.add('active');
+      secKeu.style.display = 'block';
+      secKeu.style.animation = 'scaleIn 0.25s ease forwards';
+    } else if (activeId === 'grafik') {
+      tabGrafik.classList.add('active');
+      secGrafik.style.display = 'block';
+      secGrafik.style.animation = 'scaleIn 0.25s ease forwards';
+    } else if (activeId === 'tamu') {
+      tabTamu.classList.add('active');
+      secTamu.style.display = 'block';
+      secTamu.style.animation = 'scaleIn 0.25s ease forwards';
+    }
+  }
+
+  tabKeu?.addEventListener('click', () => switchRepTab('keuangan'));
+  tabGrafik?.addEventListener('click', () => switchRepTab('grafik'));
+  tabTamu?.addEventListener('click', () => switchRepTab('tamu'));
+
   let currentData = [];
 
   function formatRp(num) {
@@ -540,6 +598,9 @@ export function initReports() {
     
     if (chkPiutang) chkPiutang.checked = true;
     localStorage.removeItem('rep_focus_piutang');
+
+    // Auto switch to Tamu Tab when redirected from bell
+    tabTamu.click();
   }
 
   // Init load

@@ -61,14 +61,11 @@ export function renderAdminDashboard(user) {
       <!-- Data Tamu Section -->
       <section style="margin-top:0.5rem;padding-bottom:2rem;">
         <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.75rem;">Data Tamu</h3>
-        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:flex-end;">
+        <div style="margin-bottom:1rem;">
           <div style="flex:1;">
             <label class="label-xs" style="display:block;color:var(--outline);margin-bottom:0.25rem;">TANGGAL KUNJUNGAN</label>
             <input type="date" id="tamu-date" class="input-field" value="${today}" style="padding-left:0.75rem;height:2.25rem;font-size:0.75rem;">
           </div>
-          <button id="btn-tamu-filter" style="height:2.25rem;padding:0 1rem;background:var(--primary);color:white;border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;">
-            <span class="material-symbols-outlined" style="font-size:0.875rem;">search</span> Cari
-          </button>
         </div>
         <!-- TABS & PRINT BUTTON -->
         <!-- TABS & PRINT BUTTON -->
@@ -1074,8 +1071,8 @@ export function initAdminDashboard() {
     }
   }
 
-  // Bind filter
-  document.getElementById('btn-tamu-filter')?.addEventListener('click', loadTamuList);
+  // Bind filter to date change
+  document.getElementById('tamu-date')?.addEventListener('change', loadTamuList);
   
   // Tab handling
   const tabPagiBtn = document.getElementById('tab-pagi');
