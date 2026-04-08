@@ -70,13 +70,19 @@ export function renderAdminDashboard(user) {
             <span class="material-symbols-outlined" style="font-size:0.875rem;">search</span> Cari
           </button>
         </div>
-        <!-- TABS -->
-        <div class="role-toggle" style="margin-bottom:1rem;">
-          <button type="button" class="role-toggle__btn active" id="tab-pagi" style="cursor:pointer;">
-            <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_sunny</span> Pagi
-          </button>
-          <button type="button" class="role-toggle__btn" id="tab-siang" style="cursor:pointer;">
-            <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_twilight</span> Siang
+        <!-- TABS & PRINT BUTTON -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+          <div class="role-toggle" style="margin-bottom:0;">
+            <button type="button" class="role-toggle__btn active" id="tab-pagi" style="cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_sunny</span> Pagi
+            </button>
+            <button type="button" class="role-toggle__btn" id="tab-siang" style="cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_twilight</span> Siang
+            </button>
+          </div>
+          
+          <button id="btn-cetak-manifest-bt" style="height:2.5rem;padding:0 1.25rem;background:var(--tertiary-container);color:var(--on-tertiary-container);border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.8125rem;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 12px rgba(0,0,0,0.05);transition:background 0.2s;">
+            <span class="material-symbols-outlined" style="font-size:1.125rem;">bluetooth</span> Cetak Daftar Tamu
           </button>
         </div>
 
@@ -324,6 +330,7 @@ export function initAdminDashboard() {
   let selectedTipeBayar = 'DP';
   let savedBooking = null;
   let currentEditId = null;
+  let currentDailyBookings = [];
 
   // Generate ID
   function generateOrderId() {
@@ -974,6 +981,8 @@ export function initAdminDashboard() {
         return timeB - timeA;
       });
 
+      currentDailyBookings = bookings;
+
       const pagiBookings = bookings.filter(b => b.sesiTrip === 'Pagi');
       const siangBookings = bookings.filter(b => b.sesiTrip === 'Siang');
 
@@ -1222,6 +1231,135 @@ export function initAdminDashboard() {
       if (e.name !== 'NotFoundError') {
         alert("Gagal mencetak: " + e.message);
       }
+    }
+  });
+
+  // Direct Bluetooth Thermal Print for DAFTAR TAMU (MANIFEST)
+  document.getElementById('btn-cetak-manifest-bt')?.addEventListener('click', async () => {
+    if (!navigator.bluetooth) {
+      alert('Browser ini tidak mendukung Web Bluetooth. Gunakan Chrome di Android/PC.');
+      return;
+    }
+    if (!currentDailyBookings || currentDailyBookings.length === 0) {
+      alert('Tidak ada data tamu di tanggal ini untuk dicetak.');
+      return;
+    }
+
+    try {
+      const btnBt = document.getElementById('btn-cetak-manifest-bt');
+      const originalText = btnBt.innerHTML;
+      btnBt.innerHTML = '<div class="spinner" style="width:1.125rem;height:1.125rem;border-width:2px;border-color:var(--on-tertiary-container);border-bottom-color:transparent;"></div> Memproses...';
+      btnBt.disabled = true;
+
+      // Request BT device
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+        optionalServices: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      }).catch(err => {
+        return navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+        });
+      });
+
+      const server = await device.gatt.connect();
+      
+      const serviceUUIDs = ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
+      let service = null;
+      for (const uuid of serviceUUIDs) {
+        try { service = await server.getPrimaryService(uuid); if (service) break; } catch (e) { }
+      }
+      if (!service) throw new Error("Layanan printer tidak ditemukan.");
+
+      const characteristics = await service.getCharacteristics();
+      const writeChar = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+      if (!writeChar) throw new Error("Karakteristik penulisan data tidak ditemukan.");
+
+      const encoder = new TextEncoder();
+      let payload = new Uint8Array();
+      function append(bytes) { const t = new Uint8Array(payload.length + bytes.length); t.set(payload); t.set(bytes, payload.length); payload = t; }
+      function addText(text) { append(encoder.encode(text)); }
+
+      const ESC = 0x1B;
+      
+      // INIT
+      append([ESC, 0x40]); 
+
+      const pagi = currentDailyBookings.filter(b => b.sesiTrip === 'Pagi');
+      const siang = currentDailyBookings.filter(b => b.sesiTrip === 'Siang');
+      const targetDate = document.getElementById('tamu-date').value;
+      const dateStr = new Date(targetDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      // HEADER
+      append([ESC, 0x61, 0x01]); // Align Center
+      append([ESC, 0x21, 0x08]); // Bold
+      addText("CITRAELO RAFTING\n");
+      append([ESC, 0x21, 0x00]); // Normal
+      addText("Daftar Tamu Harian\n");
+      addText(`${dateStr}\n`);
+      addText("--------------------------------\n"); // 32 chars length
+      
+      append([ESC, 0x61, 0x00]); // Align Left
+
+      function formatRow(nama, qty, status) {
+        // format: Nama (max 15), Qty (max 4), Status (max 11) => total 30 chars
+        const n = (nama || "").substring(0, 15).padEnd(15, ' ');
+        const q = String(qty).padStart(3, ' ') + "K";
+        const s = (status === 'Lunas' ? 'LUNAS' : 'HUTANG').padStart(11, ' ');
+        return n + " " + q + s + "\n";
+      }
+
+      let totalBoatsDaily = 0;
+      let totalOrdersDaily = 0;
+
+      function renderSesi(title, arr) {
+        if (arr.length === 0) return;
+        append([ESC, 0x21, 0x08]); // Bold
+        addText(`SESI ${title.toUpperCase()}\n`);
+        append([ESC, 0x21, 0x00]); // Normal
+        
+        // Col header
+        addText("NAMA            JML      STATUS\n");
+        let sumBoats = 0;
+        arr.forEach(b => {
+          const lunas = b.kurangBayar <= 0 ? 'Lunas' : 'Hutang';
+          addText(formatRow(b.nama, b.jumlahPerahu, lunas));
+          sumBoats += Number(b.jumlahPerahu);
+          totalOrdersDaily++;
+        });
+        totalBoatsDaily += sumBoats;
+        addText(`\nSubtotal Kapal: ${sumBoats}\n`);
+        addText("--------------------------------\n");
+      }
+
+      renderSesi('Pagi', pagi);
+      renderSesi('Siang', siang);
+
+      // SUMMARY
+      append([ESC, 0x21, 0x08]); // Bold
+      addText(`TOTAL PESANAN: ${totalOrdersDaily}\n`);
+      addText(`TOTAL KAPAL  : ${totalBoatsDaily}\n`);
+      append([ESC, 0x21, 0x00]); // Normal
+
+      addText("\n");
+      append([ESC, 0x61, 0x01]); // Align Center
+      addText("--- End of Report ---\n");
+      addText("\n\n\n\n"); // Feed
+
+      const chunkSize = 256;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        await writeChar.writeValue(payload.slice(i, i + chunkSize));
+      }
+
+      btnBt.innerHTML = originalText;
+      btnBt.disabled = false;
+      alert("Cetak Daftar Tamu berhasil!");
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('btn-cetak-manifest-bt').innerHTML = '<span class="material-symbols-outlined" style="font-size:1.125rem;">bluetooth</span> Cetak Daftar Tamu';
+      document.getElementById('btn-cetak-manifest-bt').disabled = false;
+      if (e.name !== 'NotFoundError') alert("Gagal mencetak: " + e.message);
     }
   });
 
