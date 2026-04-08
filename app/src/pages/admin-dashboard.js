@@ -70,23 +70,25 @@ export function renderAdminDashboard(user) {
             <span class="material-symbols-outlined" style="font-size:0.875rem;">search</span> Cari
           </button>
         </div>
-        <div id="tamu-list-container" style="display:grid;grid-template-columns: 1fr 1fr;gap:1.5rem;align-items:start;">
-          <div id="tamu-list-pagi">
-            <div style="background:linear-gradient(135deg,var(--primary-container) 0%,#ffffff 100%);padding:1rem;border-radius:var(--radius-xl);border:1px solid var(--outline-variant);display:flex;flex-direction:column;gap:0.75rem;">
-               <h4 class="font-headline" style="font-size:1.125rem;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:0.5rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--outline-variant);"><span class="material-symbols-outlined" style="font-size:1.25rem;">wb_sunny</span> Trip Pagi</h4>
-               <div class="list-content" style="display:flex;flex-direction:column;gap:0.75rem;">
-                 <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
-               </div>
-            </div>
-          </div>
-          <div id="tamu-list-siang">
-            <div style="background:linear-gradient(135deg,var(--tertiary-container) 0%,#ffffff 100%);padding:1rem;border-radius:var(--radius-xl);border:1px solid var(--outline-variant);display:flex;flex-direction:column;gap:0.75rem;">
-               <h4 class="font-headline" style="font-size:1.125rem;font-weight:800;color:var(--secondary);display:flex;align-items:center;gap:0.5rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--outline-variant);"><span class="material-symbols-outlined" style="font-size:1.25rem;">wb_twilight</span> Trip Siang</h4>
-               <div class="list-content" style="display:flex;flex-direction:column;gap:0.75rem;">
-                 <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
-               </div>
-            </div>
-          </div>
+        <!-- TABS -->
+        <div class="role-toggle" style="margin-bottom:1rem;">
+          <button type="button" class="role-toggle__btn active" id="tab-pagi" style="cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_sunny</span> Pagi
+          </button>
+          <button type="button" class="role-toggle__btn" id="tab-siang" style="cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_twilight</span> Siang
+          </button>
+        </div>
+
+        <div id="tamu-list-pagi-container" style="display:block;">
+           <div id="tamu-list-pagi" style="display:flex;flex-direction:column;gap:0.75rem;">
+             <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+           </div>
+        </div>
+        <div id="tamu-list-siang-container" style="display:none;">
+           <div id="tamu-list-siang" style="display:flex;flex-direction:column;gap:0.75rem;">
+             <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+           </div>
         </div>
       </section>
 
@@ -946,8 +948,8 @@ export function initAdminDashboard() {
   }
 
   async function loadTamuList() {
-    const listPagi = document.querySelector('#tamu-list-pagi .list-content');
-    const listSiang = document.querySelector('#tamu-list-siang .list-content');
+    const listPagi = document.getElementById('tamu-list-pagi');
+    const listSiang = document.getElementById('tamu-list-siang');
     const dateInput = document.getElementById('tamu-date');
     if (!listPagi || !listSiang || !dateInput) return;
 
@@ -1044,6 +1046,36 @@ export function initAdminDashboard() {
   // Bind filter
   document.getElementById('btn-tamu-filter')?.addEventListener('click', loadTamuList);
   
+  // Tab handling
+  const tabPagiBtn = document.getElementById('tab-pagi');
+  const tabSiangBtn = document.getElementById('tab-siang');
+  const containerPagi = document.getElementById('tamu-list-pagi-container');
+  const containerSiang = document.getElementById('tamu-list-siang-container');
+
+  if (tabPagiBtn) {
+    tabPagiBtn.addEventListener('click', () => {
+      tabPagiBtn.classList.add('active');
+      tabSiangBtn.classList.remove('active');
+      containerPagi.style.display = 'block';
+      containerSiang.style.display = 'none';
+      
+      // Animate entry
+      containerPagi.style.animation = 'scaleIn 0.25s ease forwards';
+    });
+  }
+
+  if (tabSiangBtn) {
+    tabSiangBtn.addEventListener('click', () => {
+      tabSiangBtn.classList.add('active');
+      tabPagiBtn.classList.remove('active');
+      containerSiang.style.display = 'block';
+      containerPagi.style.display = 'none';
+      
+      // Animate entry
+      containerSiang.style.animation = 'scaleIn 0.25s ease forwards';
+    });
+  }
+
   // Initial load
   loadTamuList();
 
