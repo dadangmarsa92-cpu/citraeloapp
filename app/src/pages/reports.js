@@ -54,7 +54,19 @@ export function renderReports(user) {
         </div>
       </section>
 
-      <!-- Chart Section -->
+      <!-- Chart Pesanan & Kapal -->
+      <section class="card" style="padding:1.5rem;margin-bottom:1rem;">
+        <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">Statistik Pesanan & Kapal</h3>
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+          <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.6875rem;font-weight:700;color:var(--outline);"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);"></span> Pesanan</span>
+          <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.6875rem;font-weight:700;color:var(--outline);"><span style="width:10px;height:10px;border-radius:2px;background:var(--secondary);"></span> Kapal</span>
+        </div>
+        <div style="background:var(--surface-container-lowest);border-radius:var(--radius-lg);padding:1rem;height:220px;">
+          <canvas id="rep-chart-pesanan" style="width:100%;height:100%;"></canvas>
+        </div>
+      </section>
+
+      <!-- Chart Pemasukan -->
       <section class="card" style="padding:1.5rem;">
         <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;color:var(--primary);margin-bottom:1rem;">Grafik Pemasukan Harian</h3>
         <div style="background:var(--surface-container-lowest);border-radius:var(--radius-lg);padding:1rem;height:250px;">
@@ -137,6 +149,14 @@ export function initReports() {
       let totalPiutang = 0;
       
       const dailyMap = {};
+      const pesananMap = {};
+
+      const start = new Date(fromVal);
+      const end = new Date(toVal);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split('T')[0];
+        pesananMap[key] = { orders: 0, boats: 0 };
+      }
 
       bookings.forEach(b => {
         const val = Number(b.totalPesanan) || 0;
@@ -150,6 +170,11 @@ export function initReports() {
         const dt = b.tanggal;
         if (!dailyMap[dt]) dailyMap[dt] = 0;
         dailyMap[dt] += val;
+
+        if (pesananMap[dt] !== undefined) {
+          pesananMap[dt].orders++;
+          pesananMap[dt].boats += (Number(b.jumlahPerahu) || 0);
+        }
       });
 
       document.getElementById('rep-total-transaksi').textContent = formatRp(totalTransaksi);
@@ -182,6 +207,7 @@ export function initReports() {
 
       // 3. Draw Chart
       drawChart(dailyMap, fromVal, toVal);
+      drawChartPesanan(pesananMap);
 
     } catch (e) {
       console.error(e);
@@ -263,6 +289,71 @@ export function initReports() {
         const label = key.slice(8); // DD
         ctx.fillText(label, x + barW/2, H - 5);
       }
+    });
+  }
+
+  function drawChartPesanan(dateMap) {
+    const canvas = document.getElementById('rep-chart-pesanan');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    // Set actual size in memory
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const W = canvas.offsetWidth;
+    const H = canvas.offsetHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    const keys = Object.keys(dateMap).sort();
+    if (keys.length === 0) return;
+    const maxVal = Math.max(1, ...keys.map(k => Math.max(dateMap[k].orders, dateMap[k].boats)));
+    const barW = Math.min(20, (W - 40) / keys.length / 2.5);
+    const gap = (W - 40) / keys.length;
+    const chartH = H - 40;
+
+    // Grid lines
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = 10 + (chartH / 4) * i;
+      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    keys.forEach((key, i) => {
+      const x = 35 + i * gap;
+      const ordersH = (dateMap[key].orders / maxVal) * chartH;
+      const boatsH = (dateMap[key].boats / maxVal) * chartH;
+
+      // Orders bar
+      ctx.fillStyle = '#003461';
+      ctx.beginPath();
+      const r = Math.min(3, barW / 2);
+      const ox = x; const oy = 10 + chartH - ordersH;
+      ctx.moveTo(ox, oy + r); ctx.arcTo(ox, oy, ox + barW, oy, r); ctx.arcTo(ox + barW, oy, ox + barW, oy + ordersH, r);
+      ctx.lineTo(ox + barW, 10 + chartH); ctx.lineTo(ox, 10 + chartH); ctx.closePath(); ctx.fill();
+
+      // Boats bar
+      ctx.fillStyle = '#ab3600';
+      const bx = x + barW + 2; const by = 10 + chartH - boatsH;
+      ctx.beginPath();
+      ctx.moveTo(bx, by + r); ctx.arcTo(bx, by, bx + barW, by, r); ctx.arcTo(bx + barW, by, bx + barW, by + boatsH, r);
+      ctx.lineTo(bx + barW, 10 + chartH); ctx.lineTo(bx, 10 + chartH); ctx.closePath(); ctx.fill();
+
+      // Date label
+      ctx.fillStyle = '#666';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      const label = key.slice(5); // MM-DD
+      ctx.fillText(label, x + barW, H - 5);
+
+      // Value labels
+      ctx.fillStyle = '#003461';
+      ctx.font = 'bold 8px sans-serif';
+      if (dateMap[key].orders > 0) ctx.fillText(dateMap[key].orders, ox + barW / 2, oy - 3);
+      ctx.fillStyle = '#ab3600';
+      if (dateMap[key].boats > 0) ctx.fillText(dateMap[key].boats, bx + barW / 2, by - 3);
     });
   }
 
@@ -403,13 +494,28 @@ export function initReports() {
     const toVal = dateTo.value;
     if (currentData.length > 0) {
       const map = {};
+      const pesananMap = {};
+
+      const start = new Date(fromVal);
+      const end = new Date(toVal);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split('T')[0];
+        pesananMap[key] = { orders: 0, boats: 0 };
+      }
+
       currentData.forEach(b => {
         const val = Number(b.totalPesanan) || 0;
         const dt = b.tanggal;
         if (!map[dt]) map[dt] = 0;
         map[dt] += val;
+
+        if (pesananMap[dt] !== undefined) {
+          pesananMap[dt].orders++;
+          pesananMap[dt].boats += (Number(b.jumlahPerahu) || 0);
+        }
       });
       drawChart(map, fromVal, toVal);
+      drawChartPesanan(pesananMap);
     }
   });
 

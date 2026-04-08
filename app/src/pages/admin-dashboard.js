@@ -57,32 +57,6 @@ export function renderAdminDashboard(user) {
         </div>
       </section>
 
-      <!-- Chart Section -->
-      <section>
-        <h3 class="font-headline" style="font-size:1.125rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.75rem;">Statistik Pesanan</h3>
-        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
-          <div style="flex:1;min-width:110px;">
-            <label class="label-xs" style="display:block;color:var(--outline);margin-bottom:0.25rem;">DARI</label>
-            <input type="date" id="chart-from" class="input-field" value="${fromDefault}" style="padding-left:0.75rem;height:2.25rem;font-size:0.75rem;">
-          </div>
-          <div style="flex:1;min-width:110px;">
-            <label class="label-xs" style="display:block;color:var(--outline);margin-bottom:0.25rem;">SAMPAI</label>
-            <input type="date" id="chart-to" class="input-field" value="${today}" style="padding-left:0.75rem;height:2.25rem;font-size:0.75rem;">
-          </div>
-          <div style="display:flex;align-items:flex-end;">
-            <button id="btn-chart-filter" style="height:2.25rem;padding:0 1rem;background:var(--primary);color:white;border:none;border-radius:var(--radius-full);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;">
-              <span class="material-symbols-outlined" style="font-size:0.875rem;">filter_alt</span> Filter
-            </button>
-          </div>
-        </div>
-        <div style="display:flex;gap:1rem;margin-bottom:0.5rem;">
-          <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.6875rem;font-weight:700;color:var(--outline);"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);"></span> Pesanan</span>
-          <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.6875rem;font-weight:700;color:var(--outline);"><span style="width:10px;height:10px;border-radius:2px;background:var(--secondary);"></span> Kapal</span>
-        </div>
-        <div style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:1rem;min-height:220px;">
-          <canvas id="chart-orders" style="width:100%;height:200px;"></canvas>
-        </div>
-      </section>
 
       <!-- Data Tamu Section -->
       <section style="margin-top:0.5rem;padding-bottom:2rem;">
@@ -326,102 +300,6 @@ export function initAdminDashboard() {
   }
   loadTodayStats();
 
-  // ── CHART ──
-  async function loadChart(from, to) {
-    try {
-      const snap = await getDocs(collection(db, 'bookings'));
-      const dateMap = {};
-      // Init date range
-      const start = new Date(from);
-      const end = new Date(to);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const key = d.toISOString().split('T')[0];
-        dateMap[key] = { orders: 0, boats: 0 };
-      }
-      snap.docs.forEach(d => {
-        const data = d.data();
-        const dt = data.tanggal;
-        if (dt && dateMap[dt] !== undefined) {
-          dateMap[dt].orders++;
-          dateMap[dt].boats += (data.jumlahPerahu || 0);
-        }
-      });
-      drawChart(dateMap);
-    } catch (e) { console.error('Chart error:', e); }
-  }
-
-  function drawChart(dateMap) {
-    const canvas = document.getElementById('chart-orders');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = canvas.offsetWidth * dpr;
-    canvas.height = 200 * dpr;
-    ctx.scale(dpr, dpr);
-    const W = canvas.offsetWidth;
-    const H = 200;
-    ctx.clearRect(0, 0, W, H);
-
-    const keys = Object.keys(dateMap).sort();
-    if (keys.length === 0) return;
-    const maxVal = Math.max(1, ...keys.map(k => Math.max(dateMap[k].orders, dateMap[k].boats)));
-    const barW = Math.min(20, (W - 40) / keys.length / 2.5);
-    const gap = (W - 40) / keys.length;
-    const chartH = H - 40;
-
-    // Grid lines
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i <= 4; i++) {
-      const y = 10 + (chartH / 4) * i;
-      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-
-    keys.forEach((key, i) => {
-      const x = 35 + i * gap;
-      const ordersH = (dateMap[key].orders / maxVal) * chartH;
-      const boatsH = (dateMap[key].boats / maxVal) * chartH;
-
-      // Orders bar
-      ctx.fillStyle = '#003461';
-      ctx.beginPath();
-      const r = Math.min(3, barW / 2);
-      const ox = x; const oy = 10 + chartH - ordersH;
-      ctx.moveTo(ox, oy + r); ctx.arcTo(ox, oy, ox + barW, oy, r); ctx.arcTo(ox + barW, oy, ox + barW, oy + ordersH, r);
-      ctx.lineTo(ox + barW, 10 + chartH); ctx.lineTo(ox, 10 + chartH); ctx.closePath(); ctx.fill();
-
-      // Boats bar
-      ctx.fillStyle = '#ab3600';
-      const bx = x + barW + 2; const by = 10 + chartH - boatsH;
-      ctx.beginPath();
-      ctx.moveTo(bx, by + r); ctx.arcTo(bx, by, bx + barW, by, r); ctx.arcTo(bx + barW, by, bx + barW, by + boatsH, r);
-      ctx.lineTo(bx + barW, 10 + chartH); ctx.lineTo(bx, 10 + chartH); ctx.closePath(); ctx.fill();
-
-      // Date label
-      ctx.fillStyle = '#666';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'center';
-      const label = key.slice(5); // MM-DD
-      ctx.fillText(label, x + barW, H - 5);
-
-      // Value labels
-      ctx.fillStyle = '#003461';
-      ctx.font = 'bold 8px sans-serif';
-      if (dateMap[key].orders > 0) ctx.fillText(dateMap[key].orders, ox + barW / 2, oy - 3);
-      ctx.fillStyle = '#ab3600';
-      if (dateMap[key].boats > 0) ctx.fillText(dateMap[key].boats, bx + barW / 2, by - 3);
-    });
-  }
-
-  // Initial chart load
-  const fromEl = document.getElementById('chart-from');
-  const toEl = document.getElementById('chart-to');
-  if (fromEl && toEl) {
-    loadChart(fromEl.value, toEl.value);
-    document.getElementById('btn-chart-filter')?.addEventListener('click', () => {
-      loadChart(fromEl.value, toEl.value);
-    });
-  }
 
   // State
   let selectedSesi = 'Pagi';
@@ -887,21 +765,70 @@ export function initAdminDashboard() {
     };
   });
 
+  // ── CUSTOM DELETE CONFIRMATION ──
+  function showDashboardDeleteConfirm(booking) {
+    if (document.getElementById('delete-confirm-overlay')) return;
+
+    const html = `
+      <div id="delete-confirm-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1.5rem;animation:fadeIn 0.2s ease;">
+        <div style="background:white;border-radius:var(--radius-xl);width:100%;max-width:320px;padding:1.5rem;box-shadow:0 10px 25px -5px rgba(0,0,0,0.2);transform-origin:center;animation:scaleIn 0.2s ease;">
+          <div style="width:3rem;height:3rem;border-radius:50%;background:var(--error-container);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+            <span class="material-symbols-outlined" style="color:var(--error);font-size:1.5rem;">warning</span>
+          </div>
+          <h3 class="font-headline" style="text-align:center;font-size:1.25rem;font-weight:700;color:var(--on-surface);margin-bottom:0.5rem;">Hapus Pesanan?</h3>
+          <p style="text-align:center;font-size:0.8125rem;color:var(--outline);line-height:1.5;margin-bottom:1.5rem;">
+            Pesanan atas nama <strong style="color:var(--on-surface);">${booking.nama || '-'}</strong> akan dihapus secara permanen.
+          </p>
+          <div style="display:flex;gap:0.75rem;">
+            <button id="db-delete-cancel" style="flex:1;padding:0.75rem;border:1.5px solid var(--outline-variant);background:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--on-surface-variant);cursor:pointer;font-size:0.875rem;transition:all 0.2s;">Batal</button>
+            <button id="db-delete-yes" style="flex:1;padding:0.75rem;background:var(--error);color:white;border:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;cursor:pointer;font-size:0.875rem;display:flex;align-items:center;justify-content:center;gap:0.375rem;transition:all 0.2s;">
+              <span class="material-symbols-outlined" style="font-size:1rem;">delete</span> Hapus
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const overlay = document.getElementById('delete-confirm-overlay');
+
+    const closeOverlay = () => {
+      overlay.style.animation = 'fadeOut 0.2s ease forwards';
+      setTimeout(() => overlay.remove(), 200);
+    };
+
+    document.getElementById('db-delete-cancel')?.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+
+    document.getElementById('db-delete-yes')?.addEventListener('click', async () => {
+      const btn = document.getElementById('db-delete-yes');
+      btn.innerHTML = '<div class="spinner" style="width:1.125rem;height:1.125rem;border-width:2px;border-top-color:white;border-color:rgba(255,255,255,0.3);border-top-color:white;"></div>';
+      btn.style.pointerEvents = 'none';
+      try {
+        await deleteDoc(doc(db, 'bookings', booking.id));
+        closeOverlay();
+        if (typeof loadTamuList === 'function') loadTamuList();
+        if (typeof loadTodayStats === 'function') loadTodayStats();
+      } catch (err) {
+        alert('Gagal menghapus: ' + err.message);
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem;">delete</span> Hapus';
+        btn.style.pointerEvents = 'auto';
+      }
+    });
+  }
+
   // ── DATA TAMU LIST ──
   // Function to attach edit, delete, and print events to dynamically created cards
   function attachTamuEvents() {
     document.querySelectorAll('.btn-tamu-hapus').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.id;
-        if (confirm('Yakin ingin menghapus data tamu ini? Data akan hilang selamanya.')) {
-          try {
-            await deleteDoc(doc(db, 'bookings', id));
-            loadTamuList();
-            loadTodayStats();
-          } catch (err) {
-            alert('Gagal menghapus: ' + err.message);
-          }
+        const payloadStr = e.currentTarget.dataset.payload;
+        let booking = { id };
+        if (payloadStr) {
+          try { booking = JSON.parse(decodeURIComponent(payloadStr)); } catch(err){}
         }
+        showDashboardDeleteConfirm(booking);
       });
     });
 
@@ -1069,7 +996,7 @@ export function initAdminDashboard() {
               <button class="btn-tamu-cetak" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:var(--primary);border:none;color:white;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
                 <span class="material-symbols-outlined" style="font-size:1rem;">print</span> Cetak
               </button>
-              <button class="btn-tamu-hapus" data-id="${b.id}" style="width:2.25rem;height:2.25rem;padding:0;background:var(--error-container);border:none;color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+              <button class="btn-tamu-hapus" data-id="${b.id}" data-payload="${safePayload}" style="width:2.25rem;height:2.25rem;padding:0;background:var(--error-container);border:none;color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
                 <span class="material-symbols-outlined" style="font-size:1.125rem;">delete</span>
               </button>
             </div>

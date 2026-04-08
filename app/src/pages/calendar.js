@@ -157,16 +157,6 @@ function showPopup(day) {
     }
     contentEl.innerHTML = html;
 
-    // Attach click handlers to each booking row
-    contentEl.querySelectorAll('[data-booking-id]').forEach(row => {
-      row.addEventListener('click', () => {
-        const bookingId = row.dataset.bookingId;
-        const booking = allBookings.find(b => b.id === bookingId);
-        if (booking) {
-          openEditBookingModal(booking);
-        }
-      });
-    });
   }
 
   popup.style.display = 'flex';
@@ -187,8 +177,13 @@ function renderSesiGroup(sesi, bookings) {
       </div>`;
 
   bookings.forEach(b => {
+    const total = b.totalPesanan || b.totalHarga || ((b.jumlahPerahu || 0) * (b.hargaPerKapal || 0));
+    const dp = b.dp || 0;
+    const kurang = b.kurangBayar ?? Math.max(0, total - dp);
+    const isLunas = kurang <= 0;
+
     html += `
-      <div data-booking-id="${b.id}" style="display:flex;align-items:center;gap:0.75rem;padding:0.625rem 0.75rem;background:var(--surface-container-low);border-radius:var(--radius-xl);margin-bottom:0.375rem;cursor:pointer;transition:all 0.15s ease;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='var(--surface-container-high)';this.style.transform='scale(1.01)'" onmouseleave="this.style.background='var(--surface-container-low)';this.style.transform='scale(1)'">
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.625rem 0.75rem;background:var(--surface-container-low);border-radius:var(--radius-xl);margin-bottom:0.375rem;">
         <div style="width:2rem;height:2rem;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:0.6875rem;font-weight:700;flex-shrink:0;">
           ${(b.nama || '?').charAt(0).toUpperCase()}
         </div>
@@ -196,12 +191,14 @@ function renderSesiGroup(sesi, bookings) {
           <p style="font-weight:700;font-size:0.8125rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.nama || '-'}</p>
           <p style="font-size:0.6875rem;color:var(--outline);">${b.raftingType || ''}</p>
         </div>
-        <div style="display:flex;align-items:center;gap:0.375rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
           <div style="text-align:right;flex-shrink:0;">
             <p style="font-weight:800;font-size:0.875rem;color:${color};font-family:'Space Grotesk',sans-serif;">${b.jumlahPerahu || 0}</p>
             <p style="font-size:0.5625rem;color:var(--outline);font-weight:700;">KAPAL</p>
           </div>
-          <span class="material-symbols-outlined" style="font-size:1rem;color:var(--outline);opacity:0.5;">chevron_right</span>
+          <div style="padding:0.25rem 0.5rem;border-radius:var(--radius-xs);font-size:0.5625rem;font-weight:800;letter-spacing:0.05em;white-space:nowrap;${isLunas ? 'background:#dcfce7;color:#16a34a;' : 'background:var(--error-container);color:var(--error);'}">
+            ${isLunas ? 'LUNAS' : 'DP'}
+          </div>
         </div>
       </div>`;
   });
@@ -474,13 +471,82 @@ function openEditBookingModal(booking) {
   });
 
   // ── Delete handler ──
-  document.getElementById('edit-booking-delete')?.addEventListener('click', async () => {
-    if (!confirm(`Hapus pesanan "${booking.nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  const deleteBtn = document.getElementById('edit-booking-delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showDeleteConfirmation(booking, closeModal);
+    });
+  }
+}
 
-    const deleteBtn = document.getElementById('edit-booking-delete');
-    deleteBtn.innerHTML = '<div class="spinner" style="width:1.25rem;height:1.25rem;border-width:2px;"></div> Menghapus...';
-    deleteBtn.style.opacity = '0.7';
-    deleteBtn.style.pointerEvents = 'none';
+// ══════════════════════════════════════
+// Custom Delete Confirmation Dialog
+// ══════════════════════════════════════
+
+function showDeleteConfirmation(booking, closeEditModal) {
+  // Remove existing if any
+  document.getElementById('delete-confirm-overlay')?.remove();
+
+  const html = `
+    <div id="delete-confirm-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;padding:1.5rem;">
+      <div id="delete-confirm-card" style="width:100%;max-width:340px;background:var(--surface-container-lowest);border-radius:var(--radius-xl);padding:2rem 1.75rem;box-shadow:0 24px 48px rgba(0,0,0,0.2);animation:scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1);">
+        
+        <!-- Icon -->
+        <div style="display:flex;justify-content:center;margin-bottom:1.25rem;">
+          <div style="width:4rem;height:4rem;border-radius:50%;background:var(--error-container);display:flex;align-items:center;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:2rem;color:var(--error);">delete_forever</span>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <h3 class="font-headline" style="text-align:center;font-size:1.25rem;font-weight:700;color:var(--on-surface);margin-bottom:0.5rem;">Hapus Pesanan?</h3>
+
+        <!-- Message -->
+        <p style="text-align:center;font-size:0.8125rem;color:var(--outline);line-height:1.5;margin-bottom:1.5rem;">
+          Pesanan atas nama <strong style="color:var(--on-surface);">${booking.nama || '-'}</strong> akan dihapus secara permanen dan tidak dapat dikembalikan.
+        </p>
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:0.75rem;">
+          <button id="delete-confirm-cancel" style="flex:1;padding:0.75rem;border:1.5px solid var(--outline-variant);background:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--on-surface-variant);cursor:pointer;font-size:0.875rem;transition:all 0.2s;">
+            Batal
+          </button>
+          <button id="delete-confirm-yes" style="flex:1;padding:0.75rem;background:var(--error);color:white;border:none;border-radius:var(--radius-full);font-family:'Space Grotesk',sans-serif;font-weight:700;cursor:pointer;font-size:0.875rem;display:flex;align-items:center;justify-content:center;gap:0.375rem;transition:all 0.2s;">
+            <span class="material-symbols-outlined" style="font-size:1rem;">delete</span> Hapus
+          </button>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  const confirmOverlay = document.getElementById('delete-confirm-overlay');
+
+  // Cancel
+  document.getElementById('delete-confirm-cancel')?.addEventListener('click', () => {
+    confirmOverlay.style.animation = 'fadeOut 0.2s ease forwards';
+    setTimeout(() => confirmOverlay.remove(), 200);
+  });
+
+  // Click outside card to cancel
+  confirmOverlay.addEventListener('click', (e) => {
+    if (e.target === confirmOverlay) {
+      confirmOverlay.style.animation = 'fadeOut 0.2s ease forwards';
+      setTimeout(() => confirmOverlay.remove(), 200);
+    }
+  });
+
+  // Confirm delete
+  document.getElementById('delete-confirm-yes')?.addEventListener('click', async () => {
+    const yesBtn = document.getElementById('delete-confirm-yes');
+    yesBtn.innerHTML = '<div class="spinner" style="width:1.125rem;height:1.125rem;border-width:2px;border-top-color:white;border-color:rgba(255,255,255,0.3);border-top-color:white;"></div>';
+    yesBtn.style.opacity = '0.8';
+    yesBtn.style.pointerEvents = 'none';
+    document.getElementById('delete-confirm-cancel').style.pointerEvents = 'none';
 
     try {
       await deleteDoc(doc(db, 'bookings', booking.id));
@@ -488,23 +554,29 @@ function openEditBookingModal(booking) {
       // Remove from local cache
       allBookings = allBookings.filter(b => b.id !== booking.id);
 
-      showCalendarToast('Pesanan berhasil dihapus!');
-      closeModal();
+      // Close confirmation dialog
+      confirmOverlay.style.animation = 'fadeOut 0.2s ease forwards';
+      setTimeout(() => confirmOverlay.remove(), 200);
 
-      // Refresh calendar
+      // Close edit modal
+      closeEditModal();
+
+      showCalendarToast('Pesanan berhasil dihapus!');
+
+      // Refresh calendar & popup
       setTimeout(() => {
         buildCalendar();
-        // Re-show popup for this date
         const day = new Date(booking.tanggal).getDate();
         showPopup(day);
-      }, 300);
+      }, 350);
 
     } catch (err) {
       console.error('Delete booking error:', err);
-      alert('Gagal menghapus: ' + err.message);
-      deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.125rem;">delete</span> Hapus Pesanan';
-      deleteBtn.style.opacity = '1';
-      deleteBtn.style.pointerEvents = '';
+      showCalendarToast('Gagal menghapus pesanan');
+      yesBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem;">delete</span> Hapus';
+      yesBtn.style.opacity = '1';
+      yesBtn.style.pointerEvents = '';
+      document.getElementById('delete-confirm-cancel').style.pointerEvents = '';
     }
   });
 }
@@ -528,6 +600,7 @@ function showCalendarToast(message) {
 }
 
 export function initCalendar() {
+
   // Load bookings WITH id
   getDocs(collection(db, 'bookings')).then(snap => {
     allBookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
