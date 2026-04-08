@@ -3,7 +3,7 @@
  */
 import './styles/index.css';
 import { getCurrentUser } from './firebase/auth.js';
-import { renderTopBar } from './components/top-bar.js';
+import { renderTopBar, initTopBar } from './components/top-bar.js';
 import { renderBottomNav, initBottomNav } from './components/bottom-nav.js';
 import { renderLogin, initLoginPage } from './pages/login.js';
 import { renderUserDashboard, initUserDashboard } from './pages/user-dashboard.js';
@@ -58,6 +58,7 @@ function renderApp() {
       ${renderBottomNav()}
     `;
     initBottomNav();
+    initTopBar();
   }
 
   const pageContent = document.getElementById('page-content');

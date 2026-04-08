@@ -33,6 +33,11 @@ export function renderReports(user) {
             <span class="material-symbols-outlined" style="font-size:1.125rem;">search</span> Tampilkan
           </button>
         </div>
+        
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:-0.5rem;padding:0 0.5rem;">
+          <input type="checkbox" id="rep-filter-piutang" style="width:1.25rem;height:1.25rem;accent-color:var(--error);cursor:pointer;">
+          <label for="rep-filter-piutang" style="font-size:0.8125rem;font-weight:700;color:var(--on-surface-variant);cursor:pointer;">Hanya Tampilkan Transaksi Piutang (Belum Lunas)</label>
+        </div>
       </section>
 
       <!-- KPI Cards -->
@@ -116,6 +121,7 @@ export function initReports() {
   const btnPdf = document.getElementById('btn-export-pdf');
   const dateFrom = document.getElementById('rep-from');
   const dateTo = document.getElementById('rep-to');
+  const chkPiutang = document.getElementById('rep-filter-piutang');
   
   let currentData = [];
 
@@ -138,7 +144,12 @@ export function initReports() {
       );
       
       const snap = await getDocs(q);
-      const bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      let bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Filter if piutang is checked
+      if (chkPiutang && chkPiutang.checked) {
+        bookings = bookings.filter(b => b.kurangBayar > 0);
+      }
       
       bookings.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
       currentData = bookings;
@@ -518,6 +529,18 @@ export function initReports() {
       drawChartPesanan(pesananMap);
     }
   });
+
+  // Init state from notification redirect
+  if (localStorage.getItem('rep_focus_piutang') === 'true') {
+    const today = new Date();
+    const future = new Date();
+    future.setDate(today.getDate() + 30);
+    dateFrom.value = today.toISOString().split('T')[0];
+    dateTo.value = future.toISOString().split('T')[0];
+    
+    if (chkPiutang) chkPiutang.checked = true;
+    localStorage.removeItem('rep_focus_piutang');
+  }
 
   // Init load
   loadReport();

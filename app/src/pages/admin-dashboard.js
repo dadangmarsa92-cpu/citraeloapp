@@ -71,12 +71,13 @@ export function renderAdminDashboard(user) {
           </button>
         </div>
         <!-- TABS & PRINT BUTTON -->
+        <!-- TABS & PRINT BUTTON -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
-          <div class="role-toggle" style="margin-bottom:0;">
-            <button type="button" class="role-toggle__btn active" id="tab-pagi" style="cursor:pointer;">
+          <div class="role-toggle" style="margin-bottom:0; flex:1; display:flex;">
+            <button type="button" class="role-toggle__btn active" id="tab-pagi" style="cursor:pointer; flex:1; justify-content:center;">
               <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_sunny</span> Pagi
             </button>
-            <button type="button" class="role-toggle__btn" id="tab-siang" style="cursor:pointer;">
+            <button type="button" class="role-toggle__btn" id="tab-siang" style="cursor:pointer; flex:1; justify-content:center;">
               <span class="material-symbols-outlined" style="font-size:1.125rem;">wb_twilight</span> Siang
             </button>
           </div>
@@ -190,7 +191,7 @@ function getModalHTML() {
             </div>
             <div id="container-dp">
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">DP (Rp) <span style="color:var(--error);">*</span></label>
-              <input type="number" id="field-dp" class="input-field" placeholder="0" min="0" required>
+              <input type="text" id="field-dp" class="input-field" placeholder="0" required>
             </div>
             <div id="container-kurang-bayar">
               <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.375rem;margin-left:0.25rem;">KURANG BAYAR</label>
@@ -494,7 +495,7 @@ export function initAdminDashboard() {
     const harga = parseInt(hargaEl?.value) || 0;
     const tambahanTotal = getTambahanTotal();
     const total = (jumlah * harga) + tambahanTotal;
-    let dp = parseInt(dpEl?.value) || 0;
+    let dp = parseInt((dpEl?.value || '0').replace(/\./g, '')) || 0;
     let kurang = 0;
     
     if (selectedTipeBayar === 'Lunas') {
@@ -510,7 +511,28 @@ export function initAdminDashboard() {
 
   jumlahEl?.addEventListener('input', recalculate);
   hargaEl?.addEventListener('input', recalculate);
-  dpEl?.addEventListener('input', recalculate);
+
+  // Field validations & formatting
+  const namaEl = document.getElementById('field-nama');
+  const telpEl = document.getElementById('field-telp');
+
+  namaEl?.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  });
+
+  telpEl?.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+  });
+
+  dpEl?.addEventListener('input', (e) => {
+    let raw = e.target.value.replace(/[^0-9]/g, '');
+    if (raw) {
+      e.target.value = parseInt(raw, 10).toLocaleString('id-ID');
+    } else {
+      e.target.value = '';
+    }
+    recalculate();
+  });
 
   // Tambahan button — load extras types and use combobox
   let tambahanCount = 0;
@@ -582,7 +604,7 @@ export function initAdminDashboard() {
     const harga = parseInt(hargaEl.value) || 0;
     const tambahanTotal = getTambahanTotal();
     const total = (jumlah * harga) + tambahanTotal;
-    let dp = parseInt(dpEl.value) || 0;
+    let dp = parseInt(dpEl.value.replace(/\./g, '')) || 0;
     let kurang = 0;
     
     if (selectedTipeBayar === 'Lunas') {
