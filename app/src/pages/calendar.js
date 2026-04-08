@@ -56,6 +56,7 @@ export function renderCalendar(user) {
             </button>
           </div>
           <div id="popup-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;"></div>
+          <div id="popup-content"></div>
         </div>
       </div>
 
@@ -714,11 +715,6 @@ export function initCalendar() {
                </div>
                ${ctxHtml}
             </div>
-            <div style="display:flex;justify-content:flex-end;margin-top:0.25rem;">
-               <button class="btn-cal-edit" data-id="${b.id}" style="padding:0.375rem 1rem;background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-full);font-size:0.6875rem;font-weight:800;color:var(--outline);cursor:pointer;display:flex;gap:0.375rem;align-items:center;transition:background 0.2s;">
-                  <span class="material-symbols-outlined" style="font-size:0.875rem;">edit</span> Edit Tamu
-               </button>
-            </div>
           </div>
         `;
       });
@@ -731,13 +727,6 @@ export function initCalendar() {
 
     dailyList.innerHTML = html;
 
-    dailyList.querySelectorAll('.btn-cal-edit').forEach(btn => {
-       btn.addEventListener('click', () => {
-         const id = btn.dataset.id;
-         const booking = allBookings.find(x => x.id === id);
-         if(booking) openEditBookingModal(booking);
-       });
-    });
   }
 
   dailyPicker?.addEventListener('change', (e) => {

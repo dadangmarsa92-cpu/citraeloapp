@@ -29,9 +29,6 @@ export function renderReports(user) {
             <label class="label-xs" style="display:block;color:var(--outline);margin-bottom:0.25rem;">SAMPAI TANGGAL</label>
             <input type="date" id="rep-to" class="input-field" value="${todayStr}" style="padding-left:0.75rem;height:2.5rem;font-size:0.875rem;background:white;">
           </div>
-          <button id="btn-rep-filter" style="height:2.5rem;padding:0 1.5rem;background:var(--primary);color:white;border:none;border-radius:var(--radius-lg);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.875rem;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 12px rgba(0,52,97,0.2);">
-            <span class="material-symbols-outlined" style="font-size:1.125rem;">search</span> Tampilkan
-          </button>
         </div>
         
         <div style="display:flex;align-items:center;gap:0.5rem;margin-top:-0.5rem;padding:0 0.5rem;">
@@ -142,7 +139,6 @@ export function renderReports(user) {
 }
 
 export function initReports() {
-  const btnFilter = document.getElementById('btn-rep-filter');
   const btnCsv = document.getElementById('btn-export-csv');
   const btnPdf = document.getElementById('btn-export-pdf');
   const dateFrom = document.getElementById('rep-from');
@@ -170,6 +166,7 @@ export function initReports() {
       tabGrafik.classList.add('active');
       secGrafik.style.display = 'block';
       secGrafik.style.animation = 'scaleIn 0.25s ease forwards';
+      requestAnimationFrame(() => refreshCharts());
     } else if (activeId === 'tamu') {
       tabTamu.classList.add('active');
       secTamu.style.display = 'block';
@@ -192,8 +189,6 @@ export function initReports() {
     const toVal = dateTo.value;
     if (!fromVal || !toVal) return;
 
-    btnFilter.innerHTML = '<div class="spinner" style="width:1rem;height:1rem;border-width:2px;"></div>';
-    
     try {
       const q = query(
         collection(db, 'bookings'),
@@ -275,15 +270,42 @@ export function initReports() {
       }
 
       // 3. Draw Chart
-      drawChart(dailyMap, fromVal, toVal);
-      drawChartPesanan(pesananMap);
+      refreshCharts();
 
     } catch (e) {
       console.error(e);
       alert('Gagal memuat laporan: ' + e.message);
     }
+  }
 
-    btnFilter.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.125rem;">search</span> Tampilkan';
+  function refreshCharts() {
+    const fromVal = dateFrom.value;
+    const toVal = dateTo.value;
+    if (currentData.length > 0) {
+      const map = {};
+      const pesananMap = {};
+
+      const start = new Date(fromVal);
+      const end = new Date(toVal);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split('T')[0];
+        pesananMap[key] = { orders: 0, boats: 0 };
+      }
+
+      currentData.forEach(b => {
+        const val = Number(b.totalPesanan) || 0;
+        const dt = b.tanggal;
+        if (!map[dt]) map[dt] = 0;
+        map[dt] += val;
+
+        if (pesananMap[dt] !== undefined) {
+          pesananMap[dt].orders++;
+          pesananMap[dt].boats += (Number(b.jumlahPerahu) || 0);
+        }
+      });
+      drawChart(map, fromVal, toVal);
+      drawChartPesanan(pesananMap);
+    }
   }
 
   function drawChart(dailyMap, fromStr, toStr) {
@@ -554,38 +576,14 @@ export function initReports() {
   });
 
   // Attach and init
-  btnFilter?.addEventListener('click', loadReport);
+  dateFrom?.addEventListener('change', loadReport);
+  dateTo?.addEventListener('change', loadReport);
+  chkPiutang?.addEventListener('change', loadReport);
 
   // Resize canvas handler
   window.addEventListener('resize', () => {
     if (window.location.hash !== '#/reports') return;
-    const fromVal = dateFrom.value;
-    const toVal = dateTo.value;
-    if (currentData.length > 0) {
-      const map = {};
-      const pesananMap = {};
-
-      const start = new Date(fromVal);
-      const end = new Date(toVal);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const key = d.toISOString().split('T')[0];
-        pesananMap[key] = { orders: 0, boats: 0 };
-      }
-
-      currentData.forEach(b => {
-        const val = Number(b.totalPesanan) || 0;
-        const dt = b.tanggal;
-        if (!map[dt]) map[dt] = 0;
-        map[dt] += val;
-
-        if (pesananMap[dt] !== undefined) {
-          pesananMap[dt].orders++;
-          pesananMap[dt].boats += (Number(b.jumlahPerahu) || 0);
-        }
-      });
-      drawChart(map, fromVal, toVal);
-      drawChartPesanan(pesananMap);
-    }
+    refreshCharts();
   });
 
   // Init state from notification redirect
