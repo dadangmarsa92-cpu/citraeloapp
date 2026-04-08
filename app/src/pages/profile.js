@@ -4,7 +4,7 @@
  */
 import { getCurrentUser, logoutUser } from '../firebase/auth.js';
 import { db } from '../firebase/config.js';
-import { doc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
 // ── Session helper ──
 const SESSION_KEY = 'citraelo_session';
@@ -711,6 +711,59 @@ export function initProfilePage() {
 
   // Fetch today's guest count from Firestore
   loadTodayStats();
+
+  // Sync user profile from Firestore
+  syncUserProfile();
+}
+
+async function syncUserProfile() {
+  const user = getCurrentUser();
+  if (!user || !user.uid) return;
+
+  try {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userDocRef);
+
+    if (userSnap.exists()) {
+      const latestData = userSnap.data();
+      
+      // Check if there are any differences
+      const hasChanged = 
+        latestData.username !== user.username ||
+        latestData.displayName !== user.displayName ||
+        latestData.avatarUrl !== user.avatarUrl;
+
+      if (hasChanged) {
+        console.log('🔄 Profile sync: Updating local session with latest data from Firestore');
+        
+        // Update local session
+        const patch = {
+          username: latestData.username,
+          displayName: latestData.displayName,
+          avatarUrl: latestData.avatarUrl || ''
+        };
+        updateSession(patch);
+
+        // Update DOM if elements exist
+        const nameEl = document.getElementById('profile-display-name');
+        const usernameEl = document.getElementById('profile-username-display');
+        const avatarDisplay = document.getElementById('profile-avatar-display');
+
+        if (nameEl) nameEl.textContent = latestData.displayName;
+        if (usernameEl) usernameEl.textContent = `@${latestData.username}`;
+        if (avatarDisplay) {
+          avatarDisplay.innerHTML = `
+            ${renderAvatar({ ...user, ...patch })}
+            <div style="position:absolute;bottom:0;right:0;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--secondary);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(171,54,0,0.3);border:2px solid var(--surface);">
+              <span class="material-symbols-outlined" style="font-size:0.875rem;color:white;">edit</span>
+            </div>
+          `;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to sync user profile:', err);
+  }
 }
 
 async function loadTodayStats() {

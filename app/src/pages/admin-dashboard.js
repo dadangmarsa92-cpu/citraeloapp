@@ -70,8 +70,23 @@ export function renderAdminDashboard(user) {
             <span class="material-symbols-outlined" style="font-size:0.875rem;">search</span> Cari
           </button>
         </div>
-        <div id="tamu-list-container" style="display:grid;grid-template-columns:1fr;gap:0.75rem;">
-          <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+        <div id="tamu-list-container" style="display:grid;grid-template-columns: 1fr 1fr;gap:1.5rem;align-items:start;">
+          <div id="tamu-list-pagi">
+            <div style="background:linear-gradient(135deg,var(--primary-container) 0%,#ffffff 100%);padding:1rem;border-radius:var(--radius-xl);border:1px solid var(--outline-variant);display:flex;flex-direction:column;gap:0.75rem;">
+               <h4 class="font-headline" style="font-size:1.125rem;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:0.5rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--outline-variant);"><span class="material-symbols-outlined" style="font-size:1.25rem;">wb_sunny</span> Trip Pagi</h4>
+               <div class="list-content" style="display:flex;flex-direction:column;gap:0.75rem;">
+                 <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+               </div>
+            </div>
+          </div>
+          <div id="tamu-list-siang">
+            <div style="background:linear-gradient(135deg,var(--tertiary-container) 0%,#ffffff 100%);padding:1rem;border-radius:var(--radius-xl);border:1px solid var(--outline-variant);display:flex;flex-direction:column;gap:0.75rem;">
+               <h4 class="font-headline" style="font-size:1.125rem;font-weight:800;color:var(--secondary);display:flex;align-items:center;gap:0.5rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--outline-variant);"><span class="material-symbols-outlined" style="font-size:1.25rem;">wb_twilight</span> Trip Siang</h4>
+               <div class="list-content" style="display:flex;flex-direction:column;gap:0.75rem;">
+                 <div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>
+               </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -931,18 +946,21 @@ export function initAdminDashboard() {
   }
 
   async function loadTamuList() {
-    const listContainer = document.getElementById('tamu-list-container');
+    const listPagi = document.querySelector('#tamu-list-pagi .list-content');
+    const listSiang = document.querySelector('#tamu-list-siang .list-content');
     const dateInput = document.getElementById('tamu-date');
-    if (!listContainer || !dateInput) return;
+    if (!listPagi || !listSiang || !dateInput) return;
 
-    listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>';
+    listPagi.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>';
+    listSiang.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Memuat data...</div>';
 
     try {
       const q = query(collection(db, 'bookings'), where('tanggal', '==', dateInput.value));
       const snap = await getDocs(q);
       
       if (snap.empty) {
-        listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Belum ada tamu di tanggal ini.</div>';
+        listPagi.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Belum ada tamu di sesi ini.</div>';
+        listSiang.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Belum ada tamu di sesi ini.</div>';
         return;
       }
 
@@ -954,61 +972,72 @@ export function initAdminDashboard() {
         return timeB - timeA;
       });
 
-      let html = '';
-      bookings.forEach(b => {
-        const dpStatusColor = b.kurangBayar > 0 ? 'var(--error)' : '#16a34a';
-        const dpStatusText = b.kurangBayar > 0 ? formatRp(b.dp) + ' (Belum Lunas)' : 'LUNAS';
-        const safePayload = encodeURIComponent(JSON.stringify(b));
+      const pagiBookings = bookings.filter(b => b.sesiTrip === 'Pagi');
+      const siangBookings = bookings.filter(b => b.sesiTrip === 'Siang');
 
-        html += `
-          <div style="background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-xl);padding:1rem;display:flex;flex-direction:column;gap:0.75rem;">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-              <div>
-                <div style="font-size:0.65rem;color:var(--outline);font-weight:700;letter-spacing:0.05em;margin-bottom:0.125rem;">${b.idPesanan}</div>
-                <div style="font-weight:800;color:var(--on-surface);font-size:1rem;">${b.nama}</div>
-                <div style="font-size:0.75rem;color:var(--outline);margin-top:0.125rem;"><span class="material-symbols-outlined" style="font-size:0.875rem;vertical-align:middle;">call</span> ${b.telp}</div>
+      function generateHtml(arr) {
+        if (arr.length === 0) return '<div style="padding:2rem;text-align:center;color:var(--outline);font-size:0.8125rem;">Belum ada tamu di sesi ini.</div>';
+        
+        let html = '';
+        arr.forEach(b => {
+          const dpStatusColor = b.kurangBayar > 0 ? 'var(--error)' : '#16a34a';
+          const dpStatusText = b.kurangBayar > 0 ? formatRp(b.dp) + ' (Hutang)' : 'LUNAS';
+          const safePayload = encodeURIComponent(JSON.stringify(b));
+
+          html += `
+            <div style="background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-xl);padding:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <div style="font-size:0.65rem;color:var(--outline);font-weight:700;letter-spacing:0.05em;margin-bottom:0.125rem;">${b.idPesanan}</div>
+                  <div style="font-weight:800;color:var(--on-surface);font-size:1rem;">${b.nama}</div>
+                  <div style="font-size:0.75rem;color:var(--outline);margin-top:0.125rem;"><span class="material-symbols-outlined" style="font-size:0.875rem;vertical-align:middle;">call</span> ${b.telp}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.75rem;color:var(--on-surface-variant);font-weight:700;margin-top:0.25rem;">${b.jumlahPerahu} Kapal</div>
+                </div>
               </div>
-              <div style="text-align:right;">
-                <div style="font-size:0.75rem;font-weight:700;color:var(--primary);background:var(--tertiary-container);padding:0.125rem 0.5rem;border-radius:var(--radius-full);display:inline-block;">${b.sesiTrip}</div>
-                <div style="font-size:0.75rem;color:var(--on-surface-variant);font-weight:700;margin-top:0.25rem;">${b.jumlahPerahu} Kapal</div>
+              
+              <div style="background:var(--surface-container-low);border-radius:var(--radius-md);padding:0.625rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem;">
+                <div>
+                  <div style="color:var(--outline);font-size:0.65rem;">PAKET</div>
+                  <div style="font-weight:700;">${b.raftingType}</div>
+                </div>
+                <div>
+                  <div style="color:var(--outline);font-size:0.65rem;">BIAYA</div>
+                  <div style="font-weight:800;color:var(--primary);">${formatRp(b.totalPesanan)}</div>
+                </div>
+                <div style="grid-column: span 2;">
+                  <div style="color:var(--outline);font-size:0.65rem;">PEMBAYARAN</div>
+                  <div style="font-weight:700;color:${dpStatusColor};">${dpStatusText}</div>
+                </div>
+              </div>
+              
+              <div style="display:flex;gap:0.5rem;margin-top:0.25rem;align-items:center;">
+                <button class="btn-tamu-edit" data-id="${b.id}" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:white;border:1px solid var(--outline);color:var(--outline);border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">edit</span> Edit
+                </button>
+                <button class="btn-tamu-cetak" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:var(--primary);border:none;color:white;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">print</span> Cetak
+                </button>
+                <button class="btn-tamu-hapus" data-id="${b.id}" data-payload="${safePayload}" style="width:2.25rem;height:2.25rem;padding:0;background:var(--error-container);border:none;color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                  <span class="material-symbols-outlined" style="font-size:1.125rem;">delete</span>
+                </button>
               </div>
             </div>
-            
-            <div style="background:var(--surface-container-low);border-radius:var(--radius-md);padding:0.625rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem;">
-              <div>
-                <div style="color:var(--outline);font-size:0.65rem;">PAKET</div>
-                <div style="font-weight:700;">${b.raftingType}</div>
-              </div>
-              <div>
-                <div style="color:var(--outline);font-size:0.65rem;">TOTAL BIAYA</div>
-                <div style="font-weight:800;color:var(--primary);">${formatRp(b.totalPesanan)}</div>
-              </div>
-              <div style="grid-column: span 2;">
-                <div style="color:var(--outline);font-size:0.65rem;">STATUS PEMBAYARAN</div>
-                <div style="font-weight:700;color:${dpStatusColor};">${dpStatusText}</div>
-              </div>
-            </div>
-            
-            <div style="display:flex;gap:0.5rem;margin-top:0.25rem;align-items:center;">
-              <button class="btn-tamu-edit" data-id="${b.id}" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:white;border:1px solid var(--outline);color:var(--outline);border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
-                <span class="material-symbols-outlined" style="font-size:1rem;">edit</span> Edit
-              </button>
-              <button class="btn-tamu-cetak" data-payload="${safePayload}" style="flex:1;padding:0.5rem;background:var(--primary);border:none;color:white;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.25rem;cursor:pointer;">
-                <span class="material-symbols-outlined" style="font-size:1rem;">print</span> Cetak
-              </button>
-              <button class="btn-tamu-hapus" data-id="${b.id}" data-payload="${safePayload}" style="width:2.25rem;height:2.25rem;padding:0;background:var(--error-container);border:none;color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-                <span class="material-symbols-outlined" style="font-size:1.125rem;">delete</span>
-              </button>
-            </div>
-          </div>
-        `;
-      });
-      listContainer.innerHTML = html;
+          `;
+        });
+        return html;
+      }
+
+      listPagi.innerHTML = generateHtml(pagiBookings);
+      listSiang.innerHTML = generateHtml(siangBookings);
+
       attachTamuEvents();
 
     } catch (err) {
       console.error('Error loadTamuList:', err);
-      listContainer.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--error);font-size:0.8125rem;">Gagal memuat data.</div>';
+      listPagi.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--error);font-size:0.8125rem;">Gagal memuat data.</div>';
+      listSiang.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--error);font-size:0.8125rem;">Gagal memuat data.</div>';
     }
   }
 
