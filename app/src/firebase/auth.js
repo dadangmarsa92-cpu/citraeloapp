@@ -119,6 +119,15 @@ export async function seedUsers() {
       role: 'user',
       avatarUrl: '',
       sector: 'Snake River',
+    },
+    {
+      id: 'super001',
+      username: 'superuser',
+      password: 'super123',
+      displayName: 'System Admin',
+      role: 'superuser',
+      avatarUrl: '',
+      sector: 'HQ',
     }
   ];
 

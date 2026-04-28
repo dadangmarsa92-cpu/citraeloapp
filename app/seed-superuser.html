@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>CitraElo — Seed Superuser</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 80px auto; padding: 1rem; }
+    button { padding: 1rem 2rem; background: #0066cc; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 1rem; }
+    #log { margin-top: 1.5rem; background: #f0f0f0; border-radius: 8px; padding: 1rem; font-family: monospace; min-height: 80px; white-space: pre-wrap; }
+    .ok { color: green; } .err { color: red; }
+  </style>
+</head>
+<body>
+  <h1>🔧 Seed Superuser — CitraElo</h1>
+  <p>Klik tombol di bawah untuk membuat akun superuser di Firestore.<br>
+  <strong>Username:</strong> superuser &nbsp;|&nbsp; <strong>Password:</strong> super123</p>
+  <button onclick="seedSuperuser()">Buat Superuser</button>
+  <div id="log">Menunggu...</div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+    import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCyFbsc2l3Osrac4zRbo_hZfvjvjEqmEDM",
+      authDomain: "citraeloapp.firebaseapp.com",
+      projectId: "citraeloapp",
+      storageBucket: "citraeloapp.firebasestorage.app",
+      messagingSenderId: "993130577551",
+      appId: "1:993130577551:web:d285c1a403277ae75c7afa"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const log = document.getElementById('log');
+
+    window.seedSuperuser = async function() {
+      log.innerHTML = '⏳ Memproses...';
+      try {
+        const superRef = doc(db, 'users', 'super001');
+        const existing = await getDoc(superRef);
+
+        if (existing.exists()) {
+          const data = existing.data();
+          log.innerHTML = `<span class="ok">✅ Superuser sudah ada!\n\nID: super001\nUsername: ${data.username}\nRole: ${data.role}\nDisplay Name: ${data.displayName}</span>`;
+          return;
+        }
+
+        await setDoc(superRef, {
+          username: 'superuser',
+          password: 'super123',
+          displayName: 'System Admin',
+          role: 'superuser',
+          avatarUrl: '',
+          sector: 'HQ',
+          createdAt: serverTimestamp()
+        });
+
+        log.innerHTML = `<span class="ok">✅ Superuser berhasil dibuat!\n\nID: super001\nUsername: superuser\nPassword: super123\nRole: superuser\nDisplay Name: System Admin\n\nSilakan login ke aplikasi dengan role SUPER USER.</span>`;
+
+      } catch (err) {
+        log.innerHTML = `<span class="err">❌ Error: ${err.message}</span>`;
+        console.error(err);
+      }
+    };
+
+    // Auto check on load
+    (async () => {
+      try {
+        const superRef = doc(db, 'users', 'super001');
+        const existing = await getDoc(superRef);
+        if (existing.exists()) {
+          log.innerHTML = `<span class="ok">ℹ️ Superuser sudah ada di database (ID: super001)</span>`;
+        } else {
+          log.innerHTML = 'ℹ️ Superuser belum ada. Klik tombol untuk membuatnya.';
+        }
+      } catch(e) {
+        log.innerHTML = `Siap. Klik tombol untuk seed.`;
+      }
+    })();
+  </script>
+</body>
+</html>

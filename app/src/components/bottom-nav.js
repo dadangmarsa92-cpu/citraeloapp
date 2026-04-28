@@ -7,6 +7,22 @@ import { getCurrentUser } from '../firebase/auth.js';
 export function renderBottomNav() {
   const user = getCurrentUser();
   const isAdmin = user?.role === 'admin';
+  const isSuper = user?.role === 'superuser';
+
+  if (isSuper) {
+    return `
+      <nav class="bottom-nav" id="bottom-nav">
+        <button class="bottom-nav__item" data-route="/superuser" type="button">
+          <span class="material-symbols-outlined bottom-nav__item-icon">manage_accounts</span>
+          <span class="bottom-nav__item-label">KELOLA AKUN</span>
+        </button>
+        <button class="bottom-nav__item" id="btn-user-logout" type="button">
+          <span class="material-symbols-outlined bottom-nav__item-icon">logout</span>
+          <span class="bottom-nav__item-label">LOGOUT</span>
+        </button>
+      </nav>
+    `;
+  }
 
   return `
     <nav class="bottom-nav" id="bottom-nav">

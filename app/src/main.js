@@ -13,6 +13,7 @@ import { renderReports, initReports } from './pages/reports.js';
 import { renderProfile, initProfilePage } from './pages/profile.js';
 import { renderSettings, initSettings } from './pages/settings.js';
 import { renderHistory, initHistory } from './pages/history.js';
+import { renderSuperuserDashboard, initSuperuserDashboard } from './pages/superuser-dashboard.js';
 import { seedDemoData } from './firebase/firestore.js';
 import { seedUsers } from './firebase/auth.js';
 
@@ -74,9 +75,16 @@ function renderApp() {
     let content = '';
     let afterRender = null;
 
-    // Role-based route guard: users can only access dashboard, calendar, history, & profile
+    // Role-based route guard
     const isAdmin = user?.role === 'admin';
-    if (!isAdmin && !['/dashboard', '/calendar', '/profile', '/history'].includes(hash)) {
+    const isSuper = user?.role === 'superuser';
+
+    if (isSuper && hash !== '/superuser') {
+      navigate('/superuser');
+      return;
+    }
+
+    if (!isSuper && !isAdmin && !['/dashboard', '/calendar', '/profile', '/history'].includes(hash)) {
       navigate('/dashboard');
       return;
     }
@@ -109,6 +117,10 @@ function renderApp() {
       case '/history':
         content = renderHistory(user);
         afterRender = () => initHistory();
+        break;
+      case '/superuser':
+        content = renderSuperuserDashboard(user);
+        afterRender = () => initSuperuserDashboard();
         break;
       default:
         navigate('/dashboard');

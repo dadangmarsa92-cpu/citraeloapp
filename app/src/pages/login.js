@@ -37,6 +37,10 @@ export function renderLogin() {
               <span class="material-symbols-outlined" style="font-size:1.125rem;">admin_panel_settings</span>
               ADMIN
             </button>
+            <button type="button" class="role-toggle__btn" data-role="superuser" id="role-superuser">
+              <span class="material-symbols-outlined" style="font-size:1.125rem;">manage_accounts</span>
+              SUPER USER
+            </button>
           </div>
 
           <!-- Fields -->
@@ -93,19 +97,19 @@ export function initLoginPage() {
   // Role toggle
   const roleUser = document.getElementById('role-user');
   const roleAdmin = document.getElementById('role-admin');
+  const roleSuper = document.getElementById('role-superuser');
 
-  if (roleUser && roleAdmin) {
-    roleUser.addEventListener('click', () => {
-      selectedRole = 'user';
-      roleUser.classList.add('active');
-      roleAdmin.classList.remove('active');
-    });
+  if (roleUser && roleAdmin && roleSuper) {
+    const btns = [roleUser, roleAdmin, roleSuper];
+    const setRole = (btn, role) => {
+      selectedRole = role;
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
 
-    roleAdmin.addEventListener('click', () => {
-      selectedRole = 'admin';
-      roleAdmin.classList.add('active');
-      roleUser.classList.remove('active');
-    });
+    roleUser.addEventListener('click', () => setRole(roleUser, 'user'));
+    roleAdmin.addEventListener('click', () => setRole(roleAdmin, 'admin'));
+    roleSuper.addEventListener('click', () => setRole(roleSuper, 'superuser'));
   }
 
   // Toggle password visibility
@@ -143,7 +147,11 @@ export function initLoginPage() {
 
       try {
         await loginUser(username, password, selectedRole);
-        window.location.hash = '/dashboard';
+        if (selectedRole === 'superuser') {
+          window.location.hash = '/superuser';
+        } else {
+          window.location.hash = '/dashboard';
+        }
       } catch (error) {
         showError(error.message || 'Login gagal. Periksa username dan password.');
         loginBtn.innerHTML = 'LOG IN';
