@@ -116,6 +116,11 @@ function renderApp() {
     requestAnimationFrame(() => {
       pageContent.style.opacity = '1';
       pageContent.style.transform = 'translateY(0)';
+      
+      // Remove transform after animation completes so position:fixed works correctly inside it
+      setTimeout(() => {
+        pageContent.style.transform = 'none';
+      }, 260);
     });
 
     // Update active nav
