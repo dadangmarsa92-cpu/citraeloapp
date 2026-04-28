@@ -127,6 +127,28 @@ function renderApp() {
     if (afterRender) afterRender();
 
     currentRoute = hash;
+
+    // Check for profile sync globally
+    import('./firebase/auth.js').then(({ syncUserSession }) => {
+       syncUserSession().then(updatedSession => {
+         if (updatedSession) {
+            const topBarAvatar = document.querySelector('.top-bar__avatar');
+            if (topBarAvatar) {
+                const initials = (updatedSession.displayName || 'U').charAt(0).toUpperCase();
+                if (updatedSession.avatarUrl) {
+                    topBarAvatar.innerHTML = `<img src="${updatedSession.avatarUrl}" alt="Profile">`;
+                } else {
+                    topBarAvatar.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--primary-container);color:white;font-weight:700;font-family:'Space Grotesk',sans-serif;">${initials}</div>`;
+                }
+            }
+            const adminGreeting = document.getElementById('dashboard-greeting-name');
+            if (adminGreeting) adminGreeting.textContent = updatedSession.displayName;
+            const userGreeting = document.getElementById('user-dashboard-greeting-name');
+            if (userGreeting) userGreeting.textContent = updatedSession.displayName;
+         }
+       });
+    });
+
   }, currentRoute === '/login' ? 0 : 100);
 }
 

@@ -35,7 +35,7 @@ export function renderTopBar(user) {
           </div>
         </div>
 
-        <div class="top-bar__avatar" onclick="window.citraNavigate('/profile')" style="cursor:pointer">
+        <div class="top-bar__avatar" onclick="window.citraNavigate('/profile')" style="cursor:pointer;position:relative;z-index:10;">
           ${avatarUrl 
             ? `<img src="${avatarUrl}" alt="Profile">` 
             : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--primary-container);color:white;font-weight:700;font-family:'Space Grotesk',sans-serif;">${initials}</div>`

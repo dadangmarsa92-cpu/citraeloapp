@@ -70,6 +70,19 @@ export function renderSettings(user) {
           <p style="color:var(--outline);font-size:0.75rem;margin-top:0.25rem;">Kelola tipe rafting & tambahan</p>
         </div>
       </section>
+      
+      <section style="margin-bottom:0.5rem;">
+        <h3 class="label-sm" style="color:var(--outline);letter-spacing:0.2em;margin-bottom:1rem;">PENGATURAN PRINTER</h3>
+        <div style="background:var(--surface-container-low);border-radius:var(--radius-xl);padding:1.25rem;">
+          <label class="label-xs" style="display:block;color:var(--on-surface-variant);margin-bottom:0.5rem;">UKURAN KERTAS THERMAL BLUETOOTH</label>
+          <select id="printer-size" class="input-field" style="padding-left:1rem;height:2.75rem;appearance:auto;cursor:pointer;background:white;border:1px solid var(--outline-variant);border-radius:var(--radius-md);width:100%;">
+            <option value="58mm">58mm (Kecil - 32 Karakter)</option>
+            <option value="80mm">80mm (Besar - 48 Karakter)</option>
+          </select>
+          <p style="font-size:0.7rem;color:var(--outline);margin-top:0.5rem;">Pengaturan ini disimpan di perangkat ini dan digunakan saat mencetak struk.</p>
+        </div>
+      </section>
+
       ${sectionHTML('TIPE RAFTING', 'kayaking', 'btn-add-type', 'type-form', 'type-name', 'type-price', 'btn-save-type', 'btn-cancel-type', 'types-list', 'HARGA PER KAPAL (Rp)')}
       ${sectionHTML('JENIS TAMBAHAN', 'add_shopping_cart', 'btn-add-extra', 'extra-form', 'extra-name', 'extra-price', 'btn-save-extra', 'btn-cancel-extra', 'extras-list', 'HARGA SATUAN (Rp)')}
     </div>
@@ -134,6 +147,14 @@ function initCRUD({ col, addBtn, formId, nameId, priceId, saveBtn, cancelBtn, li
 
 export function initSettings() {
   document.getElementById('btn-back-settings')?.addEventListener('click', () => { window.location.hash = '/profile'; });
+
+  const printerSelect = document.getElementById('printer-size');
+  if (printerSelect) {
+    printerSelect.value = localStorage.getItem('citraelo_printer_size') || '58mm';
+    printerSelect.addEventListener('change', (e) => {
+      localStorage.setItem('citraelo_printer_size', e.target.value);
+    });
+  }
 
   initCRUD({
     col: COL_RAFTING, addBtn: 'btn-add-type', formId: 'type-form', nameId: 'type-name', priceId: 'type-price',

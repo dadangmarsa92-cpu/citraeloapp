@@ -14,7 +14,7 @@ export function renderUserDashboard(user) {
       <!-- Greeting -->
       <section>
         <p style="font-size:0.8125rem;color:var(--outline);font-weight:500;">Selamat datang,</p>
-        <h2 class="font-headline" style="font-size:1.75rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;margin-top:0.125rem;">${displayName}</h2>
+        <h2 id="user-dashboard-greeting-name" class="font-headline" style="font-size:1.75rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;margin-top:0.125rem;">${displayName}</h2>
         <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
           <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.75rem;color:var(--outline);background:var(--surface-container-low);padding:0.25rem 0.75rem;border-radius:var(--radius-full);">
             <span class="material-symbols-outlined" style="font-size:0.875rem;">calendar_today</span> ${todayStr}

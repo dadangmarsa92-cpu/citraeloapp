@@ -2,7 +2,7 @@
  * Profile Page — CitraElo Rafting
  * Elegant profile view + edit modal with avatar, username, password, displayName
  */
-import { getCurrentUser, logoutUser } from '../firebase/auth.js';
+import { getCurrentUser, logoutUser, syncUserSession } from '../firebase/auth.js';
 import { db } from '../firebase/config.js';
 import { doc, updateDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
@@ -70,7 +70,7 @@ export function renderProfile(user) {
       <section style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:1rem;padding:1.5rem 0;">
         <div id="profile-avatar-display" style="position:relative;">
           ${renderAvatar(user)}
-          <div style="position:absolute;bottom:0;right:0;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--secondary);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(171,54,0,0.3);border:2px solid var(--surface);">
+          <div onclick="document.getElementById('btn-edit-profile')?.click()" style="position:absolute;bottom:0;right:0;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--secondary);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(171,54,0,0.3);border:2px solid var(--surface);cursor:pointer;z-index:10;">
             <span class="material-symbols-outlined" style="font-size:0.875rem;color:white;">edit</span>
           </div>
         </div>
@@ -717,52 +717,25 @@ export function initProfilePage() {
 }
 
 async function syncUserProfile() {
-  const user = getCurrentUser();
-  if (!user || !user.uid) return;
+  const updatedSession = await syncUserSession();
+  if (updatedSession) {
+    console.log('🔄 Profile sync: Updating local session with latest data from Firestore');
 
-  try {
-    const userDocRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userDocRef);
+    // Update DOM if elements exist
+    const nameEl = document.getElementById('profile-display-name');
+    const usernameEl = document.getElementById('profile-username-display');
+    const avatarDisplay = document.getElementById('profile-avatar-display');
 
-    if (userSnap.exists()) {
-      const latestData = userSnap.data();
-      
-      // Check if there are any differences
-      const hasChanged = 
-        latestData.username !== user.username ||
-        latestData.displayName !== user.displayName ||
-        latestData.avatarUrl !== user.avatarUrl;
-
-      if (hasChanged) {
-        console.log('🔄 Profile sync: Updating local session with latest data from Firestore');
-        
-        // Update local session
-        const patch = {
-          username: latestData.username,
-          displayName: latestData.displayName,
-          avatarUrl: latestData.avatarUrl || ''
-        };
-        updateSession(patch);
-
-        // Update DOM if elements exist
-        const nameEl = document.getElementById('profile-display-name');
-        const usernameEl = document.getElementById('profile-username-display');
-        const avatarDisplay = document.getElementById('profile-avatar-display');
-
-        if (nameEl) nameEl.textContent = latestData.displayName;
-        if (usernameEl) usernameEl.textContent = `@${latestData.username}`;
-        if (avatarDisplay) {
-          avatarDisplay.innerHTML = `
-            ${renderAvatar({ ...user, ...patch })}
-            <div style="position:absolute;bottom:0;right:0;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--secondary);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(171,54,0,0.3);border:2px solid var(--surface);">
-              <span class="material-symbols-outlined" style="font-size:0.875rem;color:white;">edit</span>
-            </div>
-          `;
-        }
-      }
+    if (nameEl) nameEl.textContent = updatedSession.displayName;
+    if (usernameEl) usernameEl.textContent = `@${updatedSession.username}`;
+    if (avatarDisplay) {
+      avatarDisplay.innerHTML = `
+        ${renderAvatar(updatedSession)}
+        <div onclick="document.getElementById('btn-edit-profile')?.click()" style="position:absolute;bottom:0;right:0;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--secondary);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(171,54,0,0.3);border:2px solid var(--surface);cursor:pointer;z-index:10;">
+          <span class="material-symbols-outlined" style="font-size:0.875rem;color:white;">edit</span>
+        </div>
+      `;
     }
-  } catch (err) {
-    console.error('Failed to sync user profile:', err);
   }
 }
 

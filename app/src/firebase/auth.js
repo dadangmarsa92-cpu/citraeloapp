@@ -10,7 +10,8 @@ import {
   getDocs,
   doc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from 'firebase/firestore';
 
 const SESSION_KEY = 'citraelo_session';
@@ -131,4 +132,41 @@ export async function seedUsers() {
 
   console.log('✅ Users seeded successfully!');
   return users;
+}
+
+/**
+ * Sync current user session from Firestore
+ */
+export async function syncUserSession() {
+  const user = getCurrentUser();
+  if (!user || !user.uid) return null;
+  
+  try {
+    const userSnap = await getDoc(doc(db, USERS_COLLECTION, user.uid));
+    if (userSnap.exists()) {
+      const latestData = userSnap.data();
+      const hasChanged = 
+        latestData.username !== user.username ||
+        latestData.displayName !== user.displayName ||
+        latestData.avatarUrl !== user.avatarUrl;
+        
+      if (hasChanged) {
+        const patch = {
+          username: latestData.username,
+          displayName: latestData.displayName,
+          avatarUrl: latestData.avatarUrl || ''
+        };
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const session = JSON.parse(raw);
+          Object.assign(session, patch);
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+          return session;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Sync session error:', err);
+  }
+  return null;
 }

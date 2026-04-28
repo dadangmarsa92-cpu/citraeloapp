@@ -18,7 +18,7 @@ export function renderAdminDashboard(user) {
       <!-- Greeting -->
       <section>
         <p style="font-size:0.8125rem;color:var(--outline);font-weight:500;">Selamat datang,</p>
-        <h2 class="font-headline" style="font-size:1.75rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;margin-top:0.125rem;">${displayName}</h2>
+        <h2 id="dashboard-greeting-name" class="font-headline" style="font-size:1.75rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;margin-top:0.125rem;">${displayName}</h2>
         <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
           <span style="display:flex;align-items:center;gap:0.25rem;font-size:0.75rem;color:var(--outline);background:var(--surface-container-low);padding:0.25rem 0.75rem;border-radius:var(--radius-full);">
             <span class="material-symbols-outlined" style="font-size:0.875rem;">calendar_today</span> ${todayStr}
@@ -1180,6 +1180,10 @@ export function initAdminDashboard() {
       // INIT
       append([ESC, 0x40]); 
       
+      const printerSize = localStorage.getItem('citraelo_printer_size') || '58mm';
+      const PRINT_WIDTH = printerSize === '80mm' ? 48 : 32;
+      const separator = "-".repeat(PRINT_WIDTH) + "\n";
+
       // HEADER
       append([ESC, 0x61, 0x01]); // Align Center
       append([ESC, 0x21, 0x08]); // Bold
@@ -1187,17 +1191,16 @@ export function initAdminDashboard() {
       append([ESC, 0x21, 0x00]); // Normal
       addText("Struk Pemesanan\n");
       addText(`${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}\n`);
-      addText("--------------------------------\n"); // 32 chars width (58mm)
+      addText(separator);
       
       // BODY
       append([ESC, 0x61, 0x00]); // Align Left
 
       // Helper for key-value layout
       function addKv(k, v) {
-        const width = 32;
-        let strK = (k || "").substring(0, 15);
-        let strV = (v || "").toString().substring(0, 16);
-        let spaces = width - strK.length - strV.length;
+        let strK = (k || "").substring(0, Math.floor(PRINT_WIDTH / 2));
+        let strV = (v || "").toString().substring(0, Math.floor(PRINT_WIDTH / 2));
+        let spaces = PRINT_WIDTH - strK.length - strV.length;
         if (spaces < 1) spaces = 1;
         addText(strK + " ".repeat(spaces) + strV + "\n");
       }
@@ -1212,7 +1215,7 @@ export function initAdminDashboard() {
       addKv("Harga/Kpl", formatRp(savedBooking?.hargaPerKapal));
       
       if (savedBooking?.tambahan && savedBooking.tambahan.length > 0) {
-        addText("--------------------------------\n");
+        addText(separator);
         append([ESC, 0x21, 0x08]); // Bold
         addText("TAMBAHAN\n");
         append([ESC, 0x21, 0x00]); // Normal
@@ -1222,7 +1225,7 @@ export function initAdminDashboard() {
       }
 
       // FOOTER
-      addText("--------------------------------\n");
+      addText(separator);
       append([ESC, 0x21, 0x08]); // Bold
       addKv("TOTAL", formatRp(savedBooking?.totalPesanan));
       append([ESC, 0x21, 0x00]); // Normal
@@ -1314,6 +1317,10 @@ export function initAdminDashboard() {
       const targetDate = document.getElementById('tamu-date').value;
       const dateStr = new Date(targetDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+      const printerSize = localStorage.getItem('citraelo_printer_size') || '58mm';
+      const PRINT_WIDTH = printerSize === '80mm' ? 48 : 32;
+      const separator = "-".repeat(PRINT_WIDTH) + "\n";
+
       // HEADER
       append([ESC, 0x61, 0x01]); // Align Center
       append([ESC, 0x21, 0x08]); // Bold
@@ -1321,14 +1328,13 @@ export function initAdminDashboard() {
       append([ESC, 0x21, 0x00]); // Normal
       addText("Daftar Tamu Harian\n");
       addText(`${dateStr}\n`);
-      addText("--------------------------------\n"); // 32 chars length
+      addText(separator);
       
       append([ESC, 0x61, 0x00]); // Align Left
 
       function formatRow(nama, qty) {
-        // total 32 chars width
         const suffix = `${qty} Kapal`;
-        const availSpace = 32 - suffix.length - 1; 
+        const availSpace = PRINT_WIDTH - suffix.length - 1; 
         const n = (nama || "").substring(0, availSpace).padEnd(availSpace, ' ');
         return n + " " + suffix + "\n";
       }
@@ -1341,7 +1347,7 @@ export function initAdminDashboard() {
         append([ESC, 0x21, 0x08]); // Bold
         addText(`SESI ${title.toUpperCase()}\n`);
         append([ESC, 0x21, 0x00]); // Normal
-        addText("--------------------------------\n");
+        addText(separator);
         
         let sumBoats = 0;
         let ordersSesi = 0;
@@ -1353,7 +1359,7 @@ export function initAdminDashboard() {
         });
         totalBoatsDaily += sumBoats;
         
-        addText("--------------------------------\n");
+        addText(separator);
         addText(`Total Tamu/Grup : ${ordersSesi}\n`);
         addText(`Total Kapal     : ${sumBoats}\n\n`);
       }
