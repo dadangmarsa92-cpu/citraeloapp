@@ -47,7 +47,7 @@ export function renderCalendar(user) {
         </div>
       </section>
       <!-- Booking popup (hidden) -->
-      <div id="cal-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1.5rem;">
+      <div id="cal-popup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1.5rem;">
         <div style="width:100%;max-width:420px;max-height:80vh;overflow-y:auto;background:var(--surface);border-radius:var(--radius-xl);padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.2);">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
             <h3 class="font-headline" style="font-size:1.25rem;font-weight:700;color:var(--primary);" id="popup-title"></h3>
@@ -128,6 +128,14 @@ function buildCalendar() {
     el.addEventListener('click', () => {
       const day = parseInt(el.dataset.day);
       showPopup(day);
+
+      // Sync the daily list at the bottom
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dailyPicker = document.getElementById('cal-daily-picker');
+      if (dailyPicker) {
+        dailyPicker.value = dateStr;
+        dailyPicker.dispatchEvent(new Event('change'));
+      }
     });
   });
 }
@@ -515,7 +523,7 @@ function showDeleteConfirmation(booking, closeEditModal) {
   document.getElementById('delete-confirm-overlay')?.remove();
 
   const html = `
-    <div id="delete-confirm-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;padding:1.5rem;">
+    <div id="delete-confirm-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;padding:1.5rem;">
       <div id="delete-confirm-card" style="width:100%;max-width:340px;background:var(--surface-container-lowest);border-radius:var(--radius-xl);padding:2rem 1.75rem;box-shadow:0 24px 48px rgba(0,0,0,0.2);animation:scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1);">
         
         <!-- Icon -->
