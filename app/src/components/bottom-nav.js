@@ -29,11 +29,19 @@ export function renderBottomNav() {
         <span class="material-symbols-outlined bottom-nav__item-icon">insert_chart</span>
         <span class="bottom-nav__item-label">REPORTS</span>
       </button>
+      <button class="bottom-nav__item" data-route="/history" type="button">
+        <span class="material-symbols-outlined bottom-nav__item-icon">history</span>
+        <span class="bottom-nav__item-label">HISTORY</span>
+      </button>
       <button class="bottom-nav__item" data-route="/profile" type="button">
         <span class="material-symbols-outlined bottom-nav__item-icon">person</span>
         <span class="bottom-nav__item-label">PROFILE</span>
       </button>
       ` : `
+      <button class="bottom-nav__item" data-route="/history" type="button">
+        <span class="material-symbols-outlined bottom-nav__item-icon">history</span>
+        <span class="bottom-nav__item-label">HISTORY</span>
+      </button>
       <!-- User: Logout button instead -->
       <button class="bottom-nav__item" id="btn-user-logout" type="button">
         <span class="material-symbols-outlined bottom-nav__item-icon">logout</span>
@@ -49,9 +57,14 @@ export function initBottomNav() {
   if (!nav) return;
   
   nav.addEventListener('click', (e) => {
-    // Ignore FAB clicks (handled separately by admin-dashboard)
     const fab = e.target.closest('.bottom-nav__fab');
-    if (fab) return;
+    if (fab) {
+      if (window.location.hash !== '#/dashboard' && window.location.hash !== '') {
+        localStorage.setItem('citraelo_open_add_modal', 'true');
+        window.location.hash = '/dashboard';
+      }
+      return;
+    }
 
     const btn = e.target.closest('.bottom-nav__item');
     if (!btn) return;

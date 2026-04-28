@@ -12,6 +12,7 @@ import { renderCalendar, initCalendar } from './pages/calendar.js';
 import { renderReports, initReports } from './pages/reports.js';
 import { renderProfile, initProfilePage } from './pages/profile.js';
 import { renderSettings, initSettings } from './pages/settings.js';
+import { renderHistory, initHistory } from './pages/history.js';
 import { seedDemoData } from './firebase/firestore.js';
 import { seedUsers } from './firebase/auth.js';
 
@@ -73,9 +74,9 @@ function renderApp() {
     let content = '';
     let afterRender = null;
 
-    // Role-based route guard: users can only access dashboard & calendar
+    // Role-based route guard: users can only access dashboard, calendar, history, & profile
     const isAdmin = user?.role === 'admin';
-    if (!isAdmin && !['/dashboard', '/calendar', '/profile'].includes(hash)) {
+    if (!isAdmin && !['/dashboard', '/calendar', '/profile', '/history'].includes(hash)) {
       navigate('/dashboard');
       return;
     }
@@ -104,6 +105,10 @@ function renderApp() {
       case '/settings':
         content = renderSettings(user);
         afterRender = () => initSettings();
+        break;
+      case '/history':
+        content = renderHistory(user);
+        afterRender = () => initHistory();
         break;
       default:
         navigate('/dashboard');

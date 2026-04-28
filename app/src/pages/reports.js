@@ -320,6 +320,8 @@ export function initReports() {
     
     const W = canvas.offsetWidth;
     const H = canvas.offsetHeight;
+    if (W <= 0 || H <= 0) return;
+    
     ctx.clearRect(0, 0, W, H);
 
     const keys = [];
@@ -395,6 +397,8 @@ export function initReports() {
     
     const W = canvas.offsetWidth;
     const H = canvas.offsetHeight;
+    if (W <= 0 || H <= 0) return;
+    
     ctx.clearRect(0, 0, W, H);
 
     const keys = Object.keys(dateMap).sort();

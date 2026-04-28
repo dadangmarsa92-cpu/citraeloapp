@@ -4,6 +4,8 @@
  */
 import { db } from '../firebase/config.js';
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getCurrentUser } from '../firebase/auth.js';
+import { logActivity } from '../firebase/activity-logger.js';
 import { loadRaftingTypes, loadTambahanTypes } from './settings.js';
 
 const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -582,6 +584,12 @@ function showDeleteConfirmation(booking, closeEditModal) {
     document.getElementById('delete-confirm-cancel').style.pointerEvents = 'none';
 
     try {
+      await logActivity(
+        'DELETE',
+        `Pesanan Dihapus (${booking.idPesanan})`,
+        `Tamu: ${booking.nama}, Kapal: ${booking.jumlahPerahu}, Sesi: ${booking.sesiTrip}`,
+        booking
+      );
       await deleteDoc(doc(db, 'bookings', booking.id));
 
       // Remove from local cache

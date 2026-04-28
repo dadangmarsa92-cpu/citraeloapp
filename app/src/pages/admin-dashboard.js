@@ -3,6 +3,8 @@
  */
 import { db } from '../firebase/config.js';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { getCurrentUser } from '../firebase/auth.js';
+import { logActivity } from '../firebase/activity-logger.js';
 import { loadRaftingTypes, loadTambahanTypes } from './settings.js';
 
 export function renderAdminDashboard(user) {
@@ -332,6 +334,7 @@ export function initAdminDashboard() {
   let selectedTipeBayar = 'DP';
   let savedBooking = null;
   let currentEditId = null;
+  let originalBookingForEdit = null;
   let currentDailyBookings = [];
 
   // Generate ID
@@ -374,42 +377,46 @@ export function initAdminDashboard() {
   });
 
   // Open modal for new booking
-  document.getElementById('btn-tambah-tamu')?.addEventListener('click', () => {
-    currentEditId = null;
-    document.getElementById('modal-booking-title').textContent = 'Tambah Tamu';
-    formView.style.display = 'block';
-    receiptView.style.display = 'none';
-    document.getElementById('form-booking').reset();
-    document.getElementById('field-id-pesanan').value = generateOrderId();
-    // Set today's date
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('field-tanggal').value = today;
-    document.getElementById('field-total').textContent = 'Rp 0';
-    document.getElementById('field-kurang-bayar').textContent = 'Rp 0';
-    selectedSesi = 'Pagi';
-    selectedMetode = 'Cash';
-    selectedTipeBayar = 'DP';
-    document.getElementById('sesi-pagi')?.classList.add('active');
-    document.getElementById('sesi-siang')?.classList.remove('active');
-    document.getElementById('metode-cash')?.classList.add('active');
-    document.getElementById('metode-transfer')?.classList.remove('active');
-    document.getElementById('tipe-dp')?.classList.add('active');
-    document.getElementById('tipe-lunas')?.classList.remove('active');
-    if(document.getElementById('container-dp')) document.getElementById('container-dp').style.display = 'block';
-    if(document.getElementById('container-kurang-bayar')) document.getElementById('container-kurang-bayar').style.display = 'block';
-    if(document.getElementById('field-dp')) {
-      document.getElementById('field-dp').required = true;
-      document.getElementById('field-dp').value = '';
-    }
-    // Reset tambahan
-    const tc = document.getElementById('tambahan-container');
-    tc.innerHTML = '';
-    tc.style.display = 'none';
-    document.getElementById('tambahan-total-row').style.display = 'none';
-    document.getElementById('field-tambahan-total').textContent = 'Rp 0';
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  });
+  const btnTambah = document.getElementById('btn-tambah-tamu');
+  if (btnTambah) {
+    btnTambah.onclick = () => {
+      currentEditId = null;
+      originalBookingForEdit = null;
+      document.getElementById('modal-booking-title').textContent = 'Tambah Tamu';
+      formView.style.display = 'block';
+      receiptView.style.display = 'none';
+      document.getElementById('form-booking').reset();
+      document.getElementById('field-id-pesanan').value = generateOrderId();
+      // Set today's date
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('field-tanggal').value = today;
+      document.getElementById('field-total').textContent = 'Rp 0';
+      document.getElementById('field-kurang-bayar').textContent = 'Rp 0';
+      selectedSesi = 'Pagi';
+      selectedMetode = 'Cash';
+      selectedTipeBayar = 'DP';
+      document.getElementById('sesi-pagi')?.classList.add('active');
+      document.getElementById('sesi-siang')?.classList.remove('active');
+      document.getElementById('metode-cash')?.classList.add('active');
+      document.getElementById('metode-transfer')?.classList.remove('active');
+      document.getElementById('tipe-dp')?.classList.add('active');
+      document.getElementById('tipe-lunas')?.classList.remove('active');
+      if(document.getElementById('container-dp')) document.getElementById('container-dp').style.display = 'block';
+      if(document.getElementById('container-kurang-bayar')) document.getElementById('container-kurang-bayar').style.display = 'block';
+      if(document.getElementById('field-dp')) {
+        document.getElementById('field-dp').required = true;
+        document.getElementById('field-dp').value = '';
+      }
+      // Reset tambahan
+      const tc = document.getElementById('tambahan-container');
+      tc.innerHTML = '';
+      tc.style.display = 'none';
+      document.getElementById('tambahan-total-row').style.display = 'none';
+      document.getElementById('field-tambahan-total').textContent = 'Rp 0';
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    };
+  }
 
   // Close modal
   function closeModal() {
@@ -651,13 +658,39 @@ export function initAdminDashboard() {
           updatedAt: serverTimestamp(),
           status: dp >= total ? 'paid' : 'pending'
         });
+        let diffDesc = [];
+        if (originalBookingForEdit) {
+          if (originalBookingForEdit.nama !== savedBooking.nama) diffDesc.push(`Nama (${originalBookingForEdit.nama} ➔ ${savedBooking.nama})`);
+          if (originalBookingForEdit.telp !== savedBooking.telp) diffDesc.push(`Telp (${originalBookingForEdit.telp} ➔ ${savedBooking.telp})`);
+          if (String(originalBookingForEdit.jumlahPerahu) !== String(savedBooking.jumlahPerahu)) diffDesc.push(`Kapal (${originalBookingForEdit.jumlahPerahu} ➔ ${savedBooking.jumlahPerahu})`);
+          if (originalBookingForEdit.sesiTrip !== savedBooking.sesiTrip) diffDesc.push(`Sesi (${originalBookingForEdit.sesiTrip} ➔ ${savedBooking.sesiTrip})`);
+          if (originalBookingForEdit.tanggal !== savedBooking.tanggal) diffDesc.push(`Tanggal (${originalBookingForEdit.tanggal} ➔ ${savedBooking.tanggal})`);
+          if (originalBookingForEdit.tipePembayaran !== savedBooking.tipePembayaran) diffDesc.push(`Tipe Bayar (${originalBookingForEdit.tipePembayaran} ➔ ${savedBooking.tipePembayaran})`);
+          if (originalBookingForEdit.metodeBayar !== savedBooking.metodeBayar) diffDesc.push(`Metode (${originalBookingForEdit.metodeBayar} ➔ ${savedBooking.metodeBayar})`);
+          if (originalBookingForEdit.raftingType !== savedBooking.raftingType) diffDesc.push(`Tipe Rafting (${originalBookingForEdit.raftingType} ➔ ${savedBooking.raftingType})`);
+          if (Number(originalBookingForEdit.totalPesanan) !== Number(savedBooking.totalPesanan)) diffDesc.push(`Total Tagihan (Rp ${originalBookingForEdit.totalPesanan} ➔ Rp ${savedBooking.totalPesanan})`);
+        }
+        const descText = diffDesc.length > 0 ? `Perubahan: ${diffDesc.join(', ')}` : `Tidak ada perubahan data inti.`;
+        
+        await logActivity(
+          'EDIT', 
+          `Pesanan Diubah (${savedBooking.idPesanan})`, 
+          descText, 
+          savedBooking
+        );
       } else {
         // Save new to Firestore
-        await addDoc(collection(db, 'bookings'), {
+        const docRef = await addDoc(collection(db, 'bookings'), {
           ...savedBooking,
           createdAt: serverTimestamp(),
           status: dp >= total ? 'paid' : 'pending'
         });
+        await logActivity(
+          'ADD', 
+          `Pesanan Baru (${savedBooking.idPesanan})`, 
+          `Tamu: ${savedBooking.nama}, Kapal: ${savedBooking.jumlahPerahu}, Sesi: ${savedBooking.sesiTrip}`, 
+          { ...savedBooking, docId: docRef.id }
+        );
       }
 
       // Refresh list
@@ -901,6 +934,7 @@ export function initAdminDashboard() {
           const data = JSON.parse(decodeURIComponent(payload));
           // Populate the modal
           currentEditId = id;
+          originalBookingForEdit = data;
           document.getElementById('modal-booking-title').textContent = 'Edit Tamu';
           formView.style.display = 'block';
           receiptView.style.display = 'none';
@@ -1397,4 +1431,11 @@ export function initAdminDashboard() {
     }
   });
 
+  // Handle cross-page FAB clicks
+  if (localStorage.getItem('citraelo_open_add_modal') === 'true') {
+    localStorage.removeItem('citraelo_open_add_modal');
+    setTimeout(() => {
+      document.getElementById('btn-tambah-tamu')?.click();
+    }, 300); // Wait for page transition
+  }
 }
